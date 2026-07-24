@@ -466,7 +466,7 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                                           badge) if badge in ["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho",
                                                               "Cinza"] else 0, key=f"stat_{row['id']}")
             with c10:
-                prox_acao = st.selectbox("PRÓXIMA AÇÃO", ["Aguardar retorno", "Reenviar e-mail", "Escalar p/ Fiscal"],
+                prox_acao = st.selectbox("PRÓXIMA AÇÃO", ["Nenhuma", "Aguardar retorno", "Reenviar e-mail", "Escalar p/ Fiscal"],
                                          index=["Aguardar retorno", "Reenviar e-mail", "Escalar p/ Fiscal"].index(
                                              row.get("proxima_acao")) if row.get("proxima_acao") in ["Aguardar retorno",
                                                                                                      "Reenviar e-mail",
