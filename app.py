@@ -4,11 +4,12 @@
 import streamlit as st
 import pandas as pd
 import os
+from datetime import datetime, date
 from sqlalchemy import create_engine, text
 
 try:
     DATABASE_URL = os.getenv("DATABASE_URL") or st.secrets.get("DATABASE_URL")
-except:
+except Exception:
     DATABASE_URL = os.getenv("DATABASE_URL") or ""
 
 if not DATABASE_URL:
@@ -18,79 +19,128 @@ if not DATABASE_URL:
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+IS_SQLITE = "sqlite" in DATABASE_URL
+
 # Configura a engine conforme o banco utilizado (SQLite ou PostgreSQL/Supabase)
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
+# pool_pre_ping evita erros de "conexão caiu" em bancos remotos (Supabase/Render)
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"check_same_thread": False} if IS_SQLITE else {},
+    pool_pre_ping=not IS_SQLITE,
+)
+
+
 # =============================================================================
 # BLOCO 2 - FUNÇÕES DE BANCO (COM ATUALIZAÇÃO AUTOMÁTICA DE COLUNAS)
 # =============================================================================
 def init_db():
+    # FIX: "id INTEGER PRIMARY KEY AUTOINCREMENT" só é válido em SQLite.
+    # Em Postgres/Supabase isso derrubava o app inteiro na primeira execução.
+    id_col = "id INTEGER PRIMARY KEY AUTOINCREMENT" if IS_SQLITE else "id SERIAL PRIMARY KEY"
+
+    try:
+        with engine.begin() as conn:
+            conn.execute(text(f"""
+                CREATE TABLE IF NOT EXISTS contatos (
+                    {id_col},
+                    comprador TEXT, fornecedor TEXT, categoria TEXT,
+                    cnpj TEXT, contato TEXT,
+                    recebeu TEXT, fala_contador TEXT,
+                    previsao_retorno TEXT, status TEXT, observacao TEXT
+                );
+            """))
+    except Exception as e:
+        st.error(f"❌ Não foi possível conectar/criar o banco de dados: {e}")
+        st.stop()
+
+    # FIX: a chave era "DATA DO CONTATO" (com espaços), o que gerava um
+    # ALTER TABLE com sintaxe inválida e a coluna nunca era criada.
+    # O restante do app referenciava "DATA_CONTATO" -> coluna inexistente ->
+    # TODO o UPDATE de salvar falhava, sempre, para todos os campos.
+    novas_colunas = {
+        "cnpj": "TEXT",
+        "data_contato": "TEXT",
+        "canal_contato": "TEXT",
+        "reenvio_necessario": "TEXT",
+        "acompanha_reforma": "INTEGER DEFAULT 0",
+        "discutiu_internamente": "INTEGER DEFAULT 0",
+        "falou_contador": "INTEGER DEFAULT 0",
+        "responsavel_contador": "TEXT",
+        "definicao_2027": "TEXT",
+        "data_proximo_contato": "TEXT",
+        "proxima_acao": "TEXT",
+        "canal": "TEXT",
+        "recebeu_comunicado": "TEXT",
+        "email_reenvio": "TEXT",
+        "acompanha_reforma_txt": "TEXT",
+        "discutiu_internamente_txt": "TEXT",
+        "responsavel_interno": "TEXT",
+        "definicao_preliminar": "TEXT",
+        "alerta_critico": "TEXT",
+    }
     with engine.begin() as conn:
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS contatos (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                comprador TEXT, fornecedor TEXT, categoria TEXT, 
-                cnpj TEXT, contato TEXT,
-                recebeu TEXT, fala_contador TEXT, 
-                previsao_retorno TEXT, status TEXT, observacao TEXT
-            );
-        """))
-        novas_colunas = {
-            "cnpj": "TEXT",
-            "DATA DO CONTATO": "TEXT",
-            "canal_contato": "TEXT",
-            "reenvio_necessario": "TEXT",
-            "acompanha_reforma": "INTEGER DEFAULT 0",
-            "discutiu_internamente": "INTEGER DEFAULT 0",
-            "falou_contador": "INTEGER DEFAULT 0",
-            "responsavel_contador": "TEXT",
-            "definicao_2027": "TEXT",
-            "data_proximo_contato": "TEXT",
-            "proxima_acao": "TEXT",
-            "canal": "TEXT",
-            "recebeu_comunicado": "TEXT",
-            "email_reenvio": "TEXT",
-            "acompanha_reforma_txt": "TEXT",
-            "discutiu_internamente_txt": "TEXT",
-            "responsavel_interno": "TEXT",
-            "definicao_preliminar": "TEXT",
-            "alerta_critico": "TEXT"
-        }
         for col, tipo in novas_colunas.items():
             try:
                 conn.execute(text(f"ALTER TABLE contatos ADD COLUMN {col} {tipo}"))
-            except:
+            except Exception:
+                # Esperado: a coluna já existe a partir da 2ª execução em diante.
                 pass
+
 
 def seed():
     with engine.connect() as conn:
         try:
             count = conn.execute(text("SELECT COUNT(*) FROM contatos")).scalar()
-            if count and count > 0: return
-        except: return
-        arquivos = [f for f in os.listdir(".") if f.lower().endswith(".xlsx")]
-        if not arquivos: return
-        alvo = None
-        for nome in ["Base-inicial-para-carga.xlsx", "BI_Campanha_Versao_SIMPLES.xlsx", "BI_Campanha.xlsx"]:
-            if nome in arquivos: alvo = nome; break
-        if not alvo: alvo = arquivos[0]
-        df = pd.read_excel(alvo, sheet_name=0)
-        rename = {}
-        for c in df.columns:
-            lc = str(c).lower()
-            if "comprador" in lc: rename[c] = "comprador"
-            elif "fornecedor" in lc or "razao" in lc: rename[c] = "fornecedor"
-            elif "cnpj" in lc: rename[c] = "cnpj"
-            elif "categoria" in lc: rename[c] = "categoria"
-            elif "contato" in lc or "telefone" in lc or "email" in lc: rename[c] = "contato"
-        df = df.rename(columns=rename)
-        colunas_necessarias = ["COMPRADOR", "FORNECEDOR", "cnpj", "categoria", "contato","data_contato", "canal_contato", "recebeu", "reenvio_necessario","acompanha_reforma", "discutiu_internamente", "falou_contador","responsavel_contador", "definicao_2027", "previsao_retorno","data_proximo_contato", "status", "proxima_acao", "observacao"]
-        for col in colunas_necessarias:
-            if col not in df.columns:
-                df[col] = 0 if "acompanha" in col or "discutiu" in col or "falou" in col else ""
-        df = df.fillna("")
-        try:
-            df[colunas_necessarias].to_sql("contatos", engine, if_exists="append", index=False)
-        except: pass
+            if count and count > 0:
+                return
+        except Exception:
+            return
+
+    arquivos = [f for f in os.listdir(".") if f.lower().endswith(".xlsx")]
+    if not arquivos:
+        return
+
+    alvo = None
+    for nome in ["Base-inicial-para-carga.xlsx", "BI_Campanha_Versao_SIMPLES.xlsx", "BI_Campanha.xlsx"]:
+        if nome in arquivos:
+            alvo = nome
+            break
+    if not alvo:
+        alvo = arquivos[0]
+
+    df = pd.read_excel(alvo, sheet_name=0)
+    rename = {}
+    for c in df.columns:
+        lc = str(c).lower()
+        if "comprador" in lc:
+            rename[c] = "comprador"
+        elif "fornecedor" in lc or "razao" in lc:
+            rename[c] = "fornecedor"
+        elif "cnpj" in lc:
+            rename[c] = "cnpj"
+        elif "categoria" in lc:
+            rename[c] = "categoria"
+        elif "contato" in lc or "telefone" in lc or "email" in lc:
+            rename[c] = "contato"
+    df = df.rename(columns=rename)
+
+    colunas_necessarias = [
+        "COMPRADOR", "FORNECEDOR", "cnpj", "categoria", "contato", "data_contato",
+        "canal_contato", "recebeu", "reenvio_necessario", "acompanha_reforma",
+        "discutiu_internamente", "falou_contador", "responsavel_contador",
+        "definicao_2027", "previsao_retorno", "data_proximo_contato", "status",
+        "proxima_acao", "observacao",
+    ]
+    for col in colunas_necessarias:
+        if col not in df.columns:
+            df[col] = 0 if any(p in col for p in ["acompanha", "discutiu", "falou"]) else ""
+    df = df.fillna("")
+
+    try:
+        df[colunas_necessarias].to_sql("contatos", engine, if_exists="append", index=False)
+    except Exception as e:
+        st.warning(f"⚠️ Não foi possível importar a planilha inicial ({alvo}): {e}")
+
 
 init_db()
 seed()
@@ -98,27 +148,52 @@ seed()
 try:
     with engine.connect() as conn:
         total_login = conn.execute(text("SELECT COUNT(*) FROM contatos")).scalar() or 0
-        atend_login = conn.execute(text("SELECT COUNT(*) FROM contatos WHERE status NOT IN ('', 'Pendente', 'None') AND status IS NOT NULL AND status != ''")).scalar() or 0
+        atend_login = conn.execute(text(
+            "SELECT COUNT(*) FROM contatos WHERE status NOT IN ('', 'Pendente', 'None') "
+            "AND status IS NOT NULL AND status != ''"
+        )).scalar() or 0
         perc_login = (atend_login / total_login * 100) if total_login else 0
-except:
-    total_login = 0; atend_login = 0; perc_login = 0
+except Exception:
+    total_login = 0
+    atend_login = 0
+    perc_login = 0
 
 # =============================================================================
 # BLOCO 3 - USUÁRIOS
 # =============================================================================
-USUARIOS = {"Camila": {"senha": "Camila@2026", "nome_completo": "CAMILA CAROLINE DA SILVA"},"Gilcimar": {"senha": "Gil@2026", "nome_completo": "GILCIMAR SILVA"},"Janaina": {"senha": "Jana@2026", "nome_completo": "JANAINA APARECIDA VENANCIO"},"Maria Fatima": {"senha": "Fatima@2026", "nome_completo": "MARIA FATIMA"},"Rafael": {"senha": "Rafa@2026", "nome_completo": "RAFAEL NASCIMENTO"},"Waldecir": {"senha": "Wal@2026", "nome_completo": "WALDECIR MARQUES"},"Gestão": {"senha": "Mbp@Gestao2026", "nome_completo": "GESTÃO"},}
+USUARIOS = {
+    "Camila": {"senha": "Camila@2026", "nome_completo": "CAMILA CAROLINE DA SILVA"},
+    "Gilcimar": {"senha": "Gil@2026", "nome_completo": "GILCIMAR SILVA"},
+    "Janaina": {"senha": "Jana@2026", "nome_completo": "JANAINA APARECIDA VENANCIO"},
+    "Maria Fatima": {"senha": "Fatima@2026", "nome_completo": "MARIA FATIMA"},
+    "Rafael": {"senha": "Rafa@2026", "nome_completo": "RAFAEL NASCIMENTO"},
+    "Waldecir": {"senha": "Wal@2026", "nome_completo": "WALDECIR MARQUES"},
+    "Gestão": {"senha": "Mbp@Gestao2026", "nome_completo": "GESTÃO"},
+}
 COMPRADORES_CURTO = ["Camila", "Gilcimar", "Janaina", "Maria Fatima", "Rafael", "Waldecir", "Gestão"]
 MAP_COMPRADOR = {k: v["nome_completo"] for k, v in USUARIOS.items()}
-KEY_MAP = {"Camila": "perf_Camila", "Gilcimar": "perf_Gilcimar","Janaina": "perf_Janaina", "Maria Fatima": "perf_Maria","Rafael": "perf_Rafael", "Waldecir": "perf_Waldecir", "Gestão": "perf_Gestao"}
+KEY_MAP = {
+    "Camila": "perf_Camila", "Gilcimar": "perf_Gilcimar", "Janaina": "perf_Janaina",
+    "Maria Fatima": "perf_Maria", "Rafael": "perf_Rafael", "Waldecir": "perf_Waldecir",
+    "Gestão": "perf_Gestao",
+}
 
-if "autenticado" not in st.session_state: st.session_state.autenticado = False
-if "usuario_logado" not in st.session_state: st.session_state.usuario_logado = None
-if "perfil" not in st.session_state: st.session_state.perfil = "Camila"
+if "autenticado" not in st.session_state:
+    st.session_state.autenticado = False
+if "usuario_logado" not in st.session_state:
+    st.session_state.usuario_logado = None
+if "perfil" not in st.session_state:
+    st.session_state.perfil = "Camila"
+
 
 def fazer_login(u, p):
     if u in USUARIOS and USUARIOS[u]["senha"] == p:
-        st.session_state.autenticado = True; st.session_state.usuario_logado = u; st.session_state.perfil = u; return True
+        st.session_state.autenticado = True
+        st.session_state.usuario_logado = u
+        st.session_state.perfil = u
+        return True
     return False
+
 
 # =============================================================================
 # BLOCO 4 - LOGIN
@@ -156,12 +231,16 @@ if not st.session_state.autenticado:
         """, unsafe_allow_html=True)
     with right:
         st.markdown('<div class="login-card">', unsafe_allow_html=True)
-        st.markdown("""<div style="color:white; font-size:20px; font-weight:800; margin-bottom:6px;">Bem-vindo de volta</div><div style="color:#5A7AA8; font-size:12px; margin-bottom:22px;">Use seu usuário de comprador para continuar</div>""", unsafe_allow_html=True)
+        st.markdown(
+            """<div style="color:white; font-size:20px; font-weight:800; margin-bottom:6px;">Bem-vindo de volta</div><div style="color:#5A7AA8; font-size:12px; margin-bottom:22px;">Use seu usuário de comprador para continuar</div>""",
+            unsafe_allow_html=True)
         usuario_sel = st.selectbox("Usuário", COMPRADORES_CURTO, key="login_user_fix")
         senha_input = st.text_input("Senha", type="password", placeholder="Digite sua senha", key="login_pass_fix")
         if st.button("Entrar no portal →", use_container_width=True, type="primary", key="btn_login_fix"):
-            if fazer_login(usuario_sel, senha_input): st.rerun()
-            else: st.error("Senha incorreta")
+            if fazer_login(usuario_sel, senha_input):
+                st.rerun()
+            else:
+                st.error("Senha incorreta")
         st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
@@ -210,11 +289,11 @@ section[data-testid="stSidebar"] {{
 }}
 
 .badge {{ font-size:11px; font-weight:600; padding:5px 10px; border-radius:20px; border:1px solid;}}
-.badge-Verde {{ background:#ECFDF5; color:#065F46; border-color:#A7F3D0;}} 
+.badge-Verde {{ background:#ECFDF5; color:#065F46; border-color:#A7F3D0;}}
 .badge-Amarelo {{ background:#FEFCE8; color:#854D0E; border-color:#FDE68A;}}
-.badge-Laranja {{ background:#FFF7ED; color:#9A3412; border-color:#FDBA74;}} 
+.badge-Laranja {{ background:#FFF7ED; color:#9A3412; border-color:#FDBA74;}}
 .badge-Vermelho {{ background:#FEF2F2; color:#991B1B; border-color:#FECACA;}}
-.badge-Cinza {{ background:#F3F4F6; color:#374151; border-color:#D1D5DB;}} 
+.badge-Cinza {{ background:#F3F4F6; color:#374151; border-color:#D1D5DB;}}
 .badge-Pendente {{ background:#F9FAFB; color:#6B7280; border-color:#E5E7EB;}}
 
 label {{ font-size:11px !important; font-weight:600 !important; color:#111827 !important;}}
@@ -268,7 +347,16 @@ with st.sidebar:
 
 perfil_real = MAP_COMPRADOR[perfil_curto]
 
-df_all = pd.read_sql(text("SELECT * FROM contatos"), engine).fillna("")
+
+# PERFORMANCE: cacheia a leitura da tabela por alguns segundos. O cache é
+# limpo manualmente logo após cada UPDATE bem-sucedido, então os dados nunca
+# ficam desatualizados na tela de quem acabou de salvar.
+@st.cache_data(ttl=30, show_spinner=False)
+def carregar_contatos():
+    return pd.read_sql(text("SELECT * FROM contatos"), engine).fillna("")
+
+
+df_all = carregar_contatos()
 
 if perfil_curto == "Gestão":
     st.markdown(
@@ -285,11 +373,14 @@ if perfil_curto == "Gestão":
         busca = st.text_input("Buscar:", placeholder="Fornecedor")
 
     df_f = df_all.copy()
-    if filtro_comp != "Todos": df_f = df_f[df_f["comprador"] == filtro_comp]
-    if filtro_status != "Todos": df_f = df_f[
-        df_f["status"].str.contains(filtro_status, case=False, na=False)] if filtro_status != "Pendente" else df_f[
-        df_f["status"].isin(["", "Pendente", "None"])]
-    if busca: df_f = df_f[df_f["fornecedor"].str.contains(busca, case=False, na=False)]
+    if filtro_comp != "Todos":
+        df_f = df_f[df_f["comprador"] == filtro_comp]
+    if filtro_status != "Todos":
+        df_f = df_f[
+            df_f["status"].str.contains(filtro_status, case=False, na=False)] if filtro_status != "Pendente" else df_f[
+            df_f["status"].isin(["", "Pendente", "None"])]
+    if busca:
+        df_f = df_f[df_f["fornecedor"].str.contains(busca, case=False, na=False)]
 
     total = len(df_f)
     cont = len(df_f[~df_f["status"].isin(["", "Pendente", "None"])])
@@ -320,21 +411,24 @@ if perfil_curto == "Gestão":
 
 # COMPRADOR
 df = df_all[df_all["comprador"] == perfil_real]
-if df.empty: df = df_all[df_all["comprador"].str.contains(perfil_curto.upper(), na=False)]
+if df.empty:
+    df = df_all[df_all["comprador"].str.contains(perfil_curto.upper(), na=False)]
 
-total = len(df);
-cont = len(df[~df["status"].isin(["", "Pendente", "None"])]);
+total = len(df)
+cont = len(df[~df["status"].isin(["", "Pendente", "None"])])
 perc = cont / total * 100 if total else 0
 st.markdown(
     f"""<div style="display:flex; justify-content:space-between; margin:10px 0 16px 0;"><div><div style="font-size:20px; font-weight:800; color:#111827;">🏢 Fornecedores • {perfil_curto}</div><div style="font-size:13px; color:#6B7280;">{cont} atendidos de {total} • {perc:.1f}% concluído</div></div></div>""",
     unsafe_allow_html=True)
 
 f_busca1, f_busca2, f_busca3, f_busca4 = st.columns([3, 1.5, 1, 1])
-with f_busca1: busca_comprador = st.text_input("🔍 Buscar fornecedor rápido:", placeholder="Ex: GRUPO ROCHA",
-                                               key=f"busca_{perfil_curto}")
-with f_busca2: filtro_status_c = st.selectbox("Status:",
-                                              ["Todos", "Pendente", "Vermelho", "Amarelo", "Verde", "Laranja", "Cinza"],
-                                              key=f"fstat_{perfil_curto}")
+with f_busca1:
+    busca_comprador = st.text_input("🔍 Buscar fornecedor rápido:", placeholder="Ex: GRUPO ROCHA",
+                                    key=f"busca_{perfil_curto}")
+with f_busca2:
+    filtro_status_c = st.selectbox("Status:",
+                                   ["Todos", "Pendente", "Vermelho", "Amarelo", "Verde", "Laranja", "Cinza"],
+                                   key=f"fstat_{perfil_curto}")
 
 df_filtrado = df.copy()
 if busca_comprador:
@@ -344,7 +438,11 @@ if busca_comprador:
 if filtro_status_c != "Todos":
     df_filtrado = df_filtrado[
         df_filtrado["status"].str.contains(filtro_status_c, case=False, na=False)] if filtro_status_c != "Pendente" else \
-    df_filtrado[df_filtrado["status"].isin(["", "Pendente", "None"])]
+        df_filtrado[df_filtrado["status"].isin(["", "Pendente", "None"])]
+
+# FIX: lista única usada tanto nas opções do selectbox quanto no cálculo do
+# índice inicial, para "PRÓXIMA AÇÃO" não abrir com o valor deslocado.
+OPCOES_PROXIMA_ACAO = ["Nenhuma", "Aguardar retorno", "Reenviar e-mail", "Escalar p/ Fiscal"]
 
 col_left, col_right = st.columns(2)
 for idx, (i, row) in enumerate(df_filtrado.iterrows()):
@@ -354,7 +452,8 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
 
     bc = "Pendente" if badge in ["", "Pendente"] else (
         "Verde" if "VERDE" in badge.upper() else "Amarelo" if "AMARELO" in badge.upper() else "Vermelho" if "VERMELHO" in badge.upper() else "Laranja" if "LARANJA" in badge.upper() else "Cinza")
-    icon = "⚪" if badge in ["", "Pendente"] else "🟢" if bc == "Verde" else "🔴" if bc == "Vermelho" else "🟡" if bc == "Amarelo" else "🟠"
+    icon = "⚪" if badge in ["",
+                            "Pendente"] else "🟢" if bc == "Verde" else "🔴" if bc == "Vermelho" else "🟡" if bc == "Amarelo" else "🟠"
 
     titulo = f"{icon} {row.get('fornecedor')}"
 
@@ -378,74 +477,103 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
             with st.form(key=f"form_{idx}_{row['id']}"):
                 c1, c2 = st.columns(2)
                 with c1:
-                    from datetime import datetime, date
-                    val_data = row.get("DATA_CONTATO")
+                    # FIX: era row.get("DATA_CONTATO") (maiúsculo) -> nunca batia
+                    # com a coluna real "data_contato" -> campo sempre em branco.
+                    val_data = row.get("data_contato")
                     data_inicial = None
                     if val_data and str(val_data).strip() != "":
                         try:
                             data_inicial = datetime.strptime(str(val_data).strip(), "%d/%m/%Y").date()
-                        except:
+                        except Exception:
                             pass
 
-                    data_contato_obj = st.date_input("DATA DO CONTATO", value=data_inicial, format="DD/MM/YYYY", key=f"data_contato_{idx}_{row['id']}")
+                    data_contato_obj = st.date_input("DATA DO CONTATO", value=data_inicial, format="DD/MM/YYYY",
+                                                     key=f"data_contato_{idx}_{row['id']}")
                     data_contato = data_contato_obj.strftime("%d/%m/%Y") if data_contato_obj else ""
                 with c2:
-                    canal_contato = st.selectbox("CANAL", ["LIGAÇÃO/WHATS", "E-MAIL", "REUNIÃO", "OUTRO"],
-                                                 index=["LIGAÇÃO/WHATS", "E-MAIL", "REUNIÃO", "OUTRO"].index(row.get("CANAL_CONTATO")) if row.get("CANAL_CONTATO") in ["LIGAÇÃO/WHATS", "E-MAIL", "REUNIÃO", "OUTRO"] else 0,
-                                                 key=f"canal_{idx}_{row['id']}")
+                    # FIX: era row.get("CANAL_CONTATO") -> coluna real é "canal_contato"
+                    opcoes_canal = ["LIGAÇÃO/WHATS", "E-MAIL", "REUNIÃO", "OUTRO"]
+                    canal_atual = row.get("canal_contato")
+                    canal_contato = st.selectbox(
+                        "CANAL", opcoes_canal,
+                        index=opcoes_canal.index(canal_atual) if canal_atual in opcoes_canal else 0,
+                        key=f"canal_{idx}_{row['id']}")
 
                 c3, c4 = st.columns(2)
                 with c3:
                     recebeu = st.selectbox("RECEBEU COMUNICADO?", ["Pendente", "Sim", "Não"],
-                                           index=["Pendente", "Sim", "Não"].index(recebeu_val) if recebeu_val in ["Pendente", "Sim", "Não"] else 0, key=f"rec_{idx}_{row['id']}")
+                                           index=["Pendente", "Sim", "Não"].index(recebeu_val) if recebeu_val in [
+                                               "Pendente", "Sim", "Não"] else 0, key=f"rec_{idx}_{row['id']}")
                 with c4:
                     reenvio = st.selectbox("REENVIO NECESSÁRIO?", ["Não", "Sim"],
-                                           index=["Não", "Sim"].index(row.get("reenvio_necessario")) if row.get("reenvio_necessario") in ["Não", "Sim"] else 0, key=f"reenvio_{idx}_{row['id']}")
+                                           index=["Não", "Sim"].index(row.get("reenvio_necessario")) if row.get(
+                                               "reenvio_necessario") in ["Não", "Sim"] else 0,
+                                           key=f"reenvio_{idx}_{row['id']}")
 
-                chk1 = st.checkbox("Já acompanha Reforma?", value=bool(row.get("acompanha_reforma", 0)), key=f"chk1_{idx}_{row['id']}")
-                chk2 = st.checkbox("Já discutiu internamente?", value=bool(row.get("discutiu_internamente", 0)), key=f"chk2_{idx}_{row['id']}")
-                chk3 = st.checkbox("Já falou c/ contador?", value=bool(row.get("falou_contador", 0)), key=f"chk3_{idx}_{row['id']}")
+                chk1 = st.checkbox("Já acompanha Reforma?", value=bool(row.get("acompanha_reforma", 0)),
+                                   key=f"chk1_{idx}_{row['id']}")
+                chk2 = st.checkbox("Já discutiu internamente?", value=bool(row.get("discutiu_internamente", 0)),
+                                   key=f"chk2_{idx}_{row['id']}")
+                chk3 = st.checkbox("Já falou c/ contador?", value=bool(row.get("falou_contador", 0)),
+                                   key=f"chk3_{idx}_{row['id']}")
 
                 c5, c6 = st.columns(2)
                 with c5:
-                    resp_cont = st.text_input("RESPONSÁVEL INTERNO / CONTADOR", value=str(row.get("responsavel_contador") or ""), placeholder="Ex: João - Contador", key=f"resp_{idx}_{row['id']}")
+                    resp_cont = st.text_input("RESPONSÁVEL INTERNO / CONTADOR",
+                                              value=str(row.get("responsavel_contador") or ""),
+                                              placeholder="Ex: João - Contador", key=f"resp_{idx}_{row['id']}")
                 with c6:
                     def_2027 = st.selectbox("DEFINIÇÃO PRELIMINAR 2027", ["Em análise", "Manter Simples", "Migrar"],
-                                            index=["Em análise", "Manter Simples", "Migrar"].index(row.get("definicao_2027")) if row.get("definicao_2027") in ["Em análise", "Manter Simples", "Migrar"] else 0,
+                                            index=["Em análise", "Manter Simples", "Migrar"].index(
+                                                row.get("definicao_2027")) if row.get("definicao_2027") in [
+                                                "Em análise", "Manter Simples", "Migrar"] else 0,
                                             key=f"def_{idx}_{row['id']}")
 
                 c7, c8 = st.columns(2)
                 with c7:
-                    val_prev = row.get("PREVISAO_RETORNO")
+                    # FIX: era row.get("PREVISAO_RETORNO") -> coluna real é "previsao_retorno"
+                    val_prev = row.get("previsao_retorno")
                     data_prev_ini = None
                     if val_prev and str(val_prev).strip() != "":
                         try:
                             data_prev_ini = datetime.strptime(str(val_prev).strip(), "%d/%m/%Y").date()
-                        except:
+                        except Exception:
                             pass
-                    prev_obj = st.date_input("PREVISÃO RETORNO", value=data_prev_ini, format="DD/MM/YYYY", key=f"prev_{idx}_{row['id']}")
+                    prev_obj = st.date_input("PREVISÃO RETORNO", value=data_prev_ini, format="DD/MM/YYYY",
+                                             key=f"prev_{idx}_{row['id']}")
                     prev = prev_obj.strftime("%d/%m/%Y") if prev_obj else ""
                 with c8:
-                    val_prox = row.get("DATA_PROXIMO_CONTATO")
+                    # FIX: era row.get("DATA_PROXIMO_CONTATO") -> coluna real é "data_proximo_contato"
+                    val_prox = row.get("data_proximo_contato")
                     data_prox_ini = None
                     if val_prox and str(val_prox).strip() != "":
                         try:
                             data_prox_ini = datetime.strptime(str(val_prox).strip(), "%d/%m/%Y").date()
-                        except:
+                        except Exception:
                             pass
-                    prox_contato_obj = st.date_input("DATA PRÓXIMO CONTATO", value=data_prox_ini, format="DD/MM/YYYY", key=f"prox_contato_{idx}_{row['id']}")
+                    prox_contato_obj = st.date_input("DATA PRÓXIMO CONTATO", value=data_prox_ini, format="DD/MM/YYYY",
+                                                     key=f"prox_contato_{idx}_{row['id']}")
                     prox_contato = prox_contato_obj.strftime("%d/%m/%Y") if prox_contato_obj else ""
 
                 c9, c10 = st.columns(2)
                 with c9:
-                    status = st.selectbox("STATUS OFICIAL", ["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"],
-                                          index=["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"].index(badge) if badge in ["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"] else 0, key=f"stat_{idx}_{row['id']}")
+                    status = st.selectbox("STATUS OFICIAL",
+                                          ["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"],
+                                          index=["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"].index(
+                                              badge) if badge in ["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho",
+                                                                  "Cinza"] else 0, key=f"stat_{idx}_{row['id']}")
                 with c10:
-                    prox_acao = st.selectbox("PRÓXIMA AÇÃO", ["Nenhuma", "Aguardar retorno", "Reenviar e-mail", "Escalar p/ Fiscal"],
-                                             index=["Aguardar retorno", "Reenviar e-mail", "Escalar p/ Fiscal"].index(row.get("proxima_acao")) if row.get("proxima_acao") in ["Aguardar retorno", "Reenviar e-mail", "Escalar p/ Fiscal"] else 0,
-                                             key=f"acao_{idx}_{row['id']}")
+                    # FIX: lista de opções e lista usada no .index() agora são a mesma
+                    # (antes o .index() usava uma lista sem "Nenhuma" e deslocava a seleção).
+                    valor_acao_atual = row.get("proxima_acao")
+                    prox_acao = st.selectbox(
+                        "PRÓXIMA AÇÃO", OPCOES_PROXIMA_ACAO,
+                        index=OPCOES_PROXIMA_ACAO.index(
+                            valor_acao_atual) if valor_acao_atual in OPCOES_PROXIMA_ACAO else 0,
+                        key=f"acao_{idx}_{row['id']}")
 
-                obs = st.text_area("OBSERVAÇÃO + EVIDÊNCIAS", value=str(row.get("observacao") or ""), key=f"obs_{idx}_{row['id']}", height=70)
+                obs = st.text_area("OBSERVAÇÃO + EVIDÊNCIAS", value=str(row.get("observacao") or ""),
+                                   key=f"obs_{idx}_{row['id']}", height=70)
 
                 # Dentro do form, o st.form_submit_button substitui o st.button comum
                 submitted = st.form_submit_button("💾 SALVAR", use_container_width=True)
@@ -454,11 +582,11 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                     try:
                         with engine.begin() as conn:
                             conn.execute(text("""
-                                UPDATE contatos SET 
-                                    DATA_CONTATO=:dc, CANAL_CONTATO=:cc, RECEBEU=:r, REENVIO_NECESSARIO=:rn,
-                                    ACOMPANHA_REFORMA=:ar, DISCUTIU_INTERNAMENTE=:di, FALOU_CONTADOR=:fc,
-                                    RESPONSAVEL_CONTADOR=:rc, DEFINICAO_2027=:d27, PREVISAO_RETORNO=:p,
-                                    DATA_PROXIMO_CONTATO=:dpc, STATUS=:s, PROXIMA_ACAO=:pa, OBSERVACAO=:o 
+                                UPDATE contatos SET
+                                    data_contato=:dc, canal_contato=:cc, recebeu=:r, reenvio_necessario=:rn,
+                                    acompanha_reforma=:ar, discutiu_internamente=:di, falou_contador=:fc,
+                                    responsavel_contador=:rc, definicao_2027=:d27, previsao_retorno=:p,
+                                    data_proximo_contato=:dpc, status=:s, proxima_acao=:pa, observacao=:o
                                 WHERE id=:id
                             """), {
                                 "dc": data_contato, "cc": canal_contato, "r": recebeu, "rn": reenvio,
@@ -466,6 +594,7 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                                 "rc": resp_cont, "d27": def_2027, "p": prev, "dpc": prox_contato,
                                 "s": status, "pa": prox_acao, "o": obs, "id": int(row['id'])
                             })
+                        carregar_contatos.clear()  # invalida o cache para refletir o salvamento imediatamente
                         st.success("✅ SALVO COM SUCESSO!")
                         st.rerun()
                     except Exception as e:
