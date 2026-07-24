@@ -380,14 +380,14 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
             </div>
             """, unsafe_allow_html=True)
 
+            from datetime import datetime, date
+
             c1, c2 = st.columns(2)
             with c1:
-                # Tratamento para converter a string salva em objeto date para o calendário, se houver valor
-                from datetime import datetime, date
-
+                # Se não houver data salva, define como None (campo limpo)
                 val_data = row.get("DATA_CONTATO")
-                data_inicial = date.today()
-                if val_data:
+                data_inicial = None
+                if val_data and str(val_data).strip() != "":
                     try:
                         data_inicial = datetime.strptime(str(val_data).strip(), "%d/%m/%Y").date()
                     except:
@@ -395,7 +395,7 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
 
                 data_contato_obj = st.date_input("DATA DO CONTATO", value=data_inicial, format="DD/MM/YYYY",
                                                  key=f"data_contato_{row['id']}")
-                data_contato = data_contato_obj.strftime("%d/%m/%Y")
+                data_contato = data_contato_obj.strftime("%d/%m/%Y") if data_contato_obj else ""
             with c2:
                 canal_contato = st.selectbox("CANAL", ["LIGAÇÃO/WHATS", "E-MAIL", "REUNIÃO", "OUTRO"],
                                              index=["LIGAÇÃO/WHATS", "E-MAIL", "REUNIÃO", "OUTRO"].index(
@@ -433,31 +433,44 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                                                                                                         "Migrar"] else 0,
                                         key=f"def_{row['id']}")
 
+            c5, c6 = st.columns(2)
+            with c5:
+                resp_cont = st.text_input("RESPONSÁVEL INTERNO / CONTADOR",
+                                          value=str(row.get("responsavel_contador") or ""),
+                                          placeholder="Ex: João - Contador", key=f"resp_{row['id']}")
+            with c6:
+                def_2027 = st.selectbox("DEFINIÇÃO PRELIMINAR 2027", ["Em análise", "Manter Simples", "Migrar"],
+                                        index=["Em análise", "Manter Simples", "Migrar"].index(
+                                            row.get("definicao_2027")) if row.get("definicao_2027") in ["Em análise",
+                                                                                                        "Manter Simples",
+                                                                                                        "Migrar"] else 0,
+                                        key=f"def_{row['id']}")
+
             from datetime import datetime, date
 
             c7, c8 = st.columns(2)
             with c7:
                 val_prev = row.get("PREVISAO_RETORNO")
-                data_prev_ini = date.today()
-                if val_prev:
+                data_prev_ini = None
+                if val_prev and str(val_prev).strip() != "":
                     try:
                         data_prev_ini = datetime.strptime(str(val_prev).strip(), "%d/%m/%Y").date()
                     except:
                         pass
                 prev_obj = st.date_input("PREVISÃO RETORNO", value=data_prev_ini, format="DD/MM/YYYY",
                                          key=f"prev_{row['id']}")
-                prev = prev_obj.strftime("%d/%m/%Y")
+                prev = prev_obj.strftime("%d/%m/%Y") if prev_obj else ""
             with c8:
                 val_prox = row.get("DATA_PROXIMO_CONTATO")
-                data_prox_ini = date.today()
-                if val_prox:
+                data_prox_ini = None
+                if val_prox and str(val_prox).strip() != "":
                     try:
                         data_prox_ini = datetime.strptime(str(val_prox).strip(), "%d/%m/%Y").date()
                     except:
                         pass
                 prox_contato_obj = st.date_input("DATA PRÓXIMO CONTATO", value=data_prox_ini, format="DD/MM/YYYY",
                                                  key=f"prox_contato_{row['id']}")
-                prox_contato = prox_contato_obj.strftime("%d/%m/%Y")
+                prox_contato = prox_contato_obj.strftime("%d/%m/%Y") if prox_contato_obj else ""
             c9, c10 = st.columns(2)
             with c9:
                 status = st.selectbox("STATUS OFICIAL",
