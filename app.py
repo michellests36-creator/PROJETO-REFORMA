@@ -354,8 +354,7 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
 
     bc = "Pendente" if badge in ["", "Pendente"] else (
         "Verde" if "VERDE" in badge.upper() else "Amarelo" if "AMARELO" in badge.upper() else "Vermelho" if "VERMELHO" in badge.upper() else "Laranja" if "LARANJA" in badge.upper() else "Cinza")
-    icon = "⚪" if badge in ["",
-                            "Pendente"] else "🟢" if bc == "Verde" else "🔴" if bc == "Vermelho" else "🟡" if bc == "Amarelo" else "🟠"
+    icon = "⚪" if badge in ["", "Pendente"] else "🟢" if bc == "Verde" else "🔴" if bc == "Vermelho" else "🟡" if bc == "Amarelo" else "🟠"
 
     titulo = f"{icon} {row.get('fornecedor')}"
 
@@ -375,116 +374,99 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
             </div>
             """, unsafe_allow_html=True)
 
-            c1, c2 = st.columns(2)
-            with c1:
-                from datetime import datetime, date
-                val_data = row.get("DATA_CONTATO")
-                data_inicial = None
-                if val_data and str(val_data).strip() != "":
+            # O st.form agrupa todos os campos para que nada recarregue enquanto a pessoa digita
+            with st.form(key=f"form_{idx}_{row['id']}"):
+                c1, c2 = st.columns(2)
+                with c1:
+                    from datetime import datetime, date
+                    val_data = row.get("DATA_CONTATO")
+                    data_inicial = None
+                    if val_data and str(val_data).strip() != "":
+                        try:
+                            data_inicial = datetime.strptime(str(val_data).strip(), "%d/%m/%Y").date()
+                        except:
+                            pass
+
+                    data_contato_obj = st.date_input("DATA DO CONTATO", value=data_inicial, format="DD/MM/YYYY", key=f"data_contato_{idx}_{row['id']}")
+                    data_contato = data_contato_obj.strftime("%d/%m/%Y") if data_contato_obj else ""
+                with c2:
+                    canal_contato = st.selectbox("CANAL", ["LIGAÇÃO/WHATS", "E-MAIL", "REUNIÃO", "OUTRO"],
+                                                 index=["LIGAÇÃO/WHATS", "E-MAIL", "REUNIÃO", "OUTRO"].index(row.get("CANAL_CONTATO")) if row.get("CANAL_CONTATO") in ["LIGAÇÃO/WHATS", "E-MAIL", "REUNIÃO", "OUTRO"] else 0,
+                                                 key=f"canal_{idx}_{row['id']}")
+
+                c3, c4 = st.columns(2)
+                with c3:
+                    recebeu = st.selectbox("RECEBEU COMUNICADO?", ["Pendente", "Sim", "Não"],
+                                           index=["Pendente", "Sim", "Não"].index(recebeu_val) if recebeu_val in ["Pendente", "Sim", "Não"] else 0, key=f"rec_{idx}_{row['id']}")
+                with c4:
+                    reenvio = st.selectbox("REENVIO NECESSÁRIO?", ["Não", "Sim"],
+                                           index=["Não", "Sim"].index(row.get("reenvio_necessario")) if row.get("reenvio_necessario") in ["Não", "Sim"] else 0, key=f"reenvio_{idx}_{row['id']}")
+
+                chk1 = st.checkbox("Já acompanha Reforma?", value=bool(row.get("acompanha_reforma", 0)), key=f"chk1_{idx}_{row['id']}")
+                chk2 = st.checkbox("Já discutiu internamente?", value=bool(row.get("discutiu_internamente", 0)), key=f"chk2_{idx}_{row['id']}")
+                chk3 = st.checkbox("Já falou c/ contador?", value=bool(row.get("falou_contador", 0)), key=f"chk3_{idx}_{row['id']}")
+
+                c5, c6 = st.columns(2)
+                with c5:
+                    resp_cont = st.text_input("RESPONSÁVEL INTERNO / CONTADOR", value=str(row.get("responsavel_contador") or ""), placeholder="Ex: João - Contador", key=f"resp_{idx}_{row['id']}")
+                with c6:
+                    def_2027 = st.selectbox("DEFINIÇÃO PRELIMINAR 2027", ["Em análise", "Manter Simples", "Migrar"],
+                                            index=["Em análise", "Manter Simples", "Migrar"].index(row.get("definicao_2027")) if row.get("definicao_2027") in ["Em análise", "Manter Simples", "Migrar"] else 0,
+                                            key=f"def_{idx}_{row['id']}")
+
+                c7, c8 = st.columns(2)
+                with c7:
+                    val_prev = row.get("PREVISAO_RETORNO")
+                    data_prev_ini = None
+                    if val_prev and str(val_prev).strip() != "":
+                        try:
+                            data_prev_ini = datetime.strptime(str(val_prev).strip(), "%d/%m/%Y").date()
+                        except:
+                            pass
+                    prev_obj = st.date_input("PREVISÃO RETORNO", value=data_prev_ini, format="DD/MM/YYYY", key=f"prev_{idx}_{row['id']}")
+                    prev = prev_obj.strftime("%d/%m/%Y") if prev_obj else ""
+                with c8:
+                    val_prox = row.get("DATA_PROXIMO_CONTATO")
+                    data_prox_ini = None
+                    if val_prox and str(val_prox).strip() != "":
+                        try:
+                            data_prox_ini = datetime.strptime(str(val_prox).strip(), "%d/%m/%Y").date()
+                        except:
+                            pass
+                    prox_contato_obj = st.date_input("DATA PRÓXIMO CONTATO", value=data_prox_ini, format="DD/MM/YYYY", key=f"prox_contato_{idx}_{row['id']}")
+                    prox_contato = prox_contato_obj.strftime("%d/%m/%Y") if prox_contato_obj else ""
+
+                c9, c10 = st.columns(2)
+                with c9:
+                    status = st.selectbox("STATUS OFICIAL", ["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"],
+                                          index=["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"].index(badge) if badge in ["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"] else 0, key=f"stat_{idx}_{row['id']}")
+                with c10:
+                    prox_acao = st.selectbox("PRÓXIMA AÇÃO", ["Nenhuma", "Aguardar retorno", "Reenviar e-mail", "Escalar p/ Fiscal"],
+                                             index=["Aguardar retorno", "Reenviar e-mail", "Escalar p/ Fiscal"].index(row.get("proxima_acao")) if row.get("proxima_acao") in ["Aguardar retorno", "Reenviar e-mail", "Escalar p/ Fiscal"] else 0,
+                                             key=f"acao_{idx}_{row['id']}")
+
+                obs = st.text_area("OBSERVAÇÃO + EVIDÊNCIAS", value=str(row.get("observacao") or ""), key=f"obs_{idx}_{row['id']}", height=70)
+
+                # Dentro do form, o st.form_submit_button substitui o st.button comum
+                submitted = st.form_submit_button("💾 SALVAR", use_container_width=True)
+
+                if submitted:
                     try:
-                        data_inicial = datetime.strptime(str(val_data).strip(), "%d/%m/%Y").date()
-                    except:
-                        pass
-
-                data_contato_obj = st.date_input("DATA DO CONTATO", value=data_inicial, format="DD/MM/YYYY",
-                                                 key=f"data_contato_{idx}_{row['id']}")
-                data_contato = data_contato_obj.strftime("%d/%m/%Y") if data_contato_obj else ""
-            with c2:
-                canal_contato = st.selectbox("CANAL", ["LIGAÇÃO/WHATS", "E-MAIL", "REUNIÃO", "OUTRO"],
-                                             index=["LIGAÇÃO/WHATS", "E-MAIL", "REUNIÃO", "OUTRO"].index(
-                                                 row.get("CANAL_CONTATO")) if row.get("CANAL_CONTATO") in [
-                                                 "LIGAÇÃO/WHATS", "E-MAIL", "REUNIÃO", "OUTRO"] else 0,
-                                             key=f"canal_{idx}_{row['id']}")
-
-            c3, c4 = st.columns(2)
-            with c3:
-                recebeu = st.selectbox("RECEBEU COMUNICADO?", ["Pendente", "Sim", "Não"],
-                                       index=["Pendente", "Sim", "Não"].index(recebeu_val) if recebeu_val in [
-                                           "Pendente", "Sim", "Não"] else 0, key=f"rec_{idx}_{row['id']}")
-            with c4:
-                reenvio = st.selectbox("REENVIO NECESSÁRIO?", ["Não", "Sim"],
-                                       index=["Não", "Sim"].index(row.get("reenvio_necessario")) if row.get(
-                                           "reenvio_necessario") in ["Não", "Sim"] else 0, key=f"reenvio_{idx}_{row['id']}")
-
-            chk1 = st.checkbox("Já acompanha Reforma?", value=bool(row.get("acompanha_reforma", 0)),
-                               key=f"chk1_{idx}_{row['id']}")
-            chk2 = st.checkbox("Já discutiu internamente?", value=bool(row.get("discutiu_internamente", 0)),
-                               key=f"chk2_{idx}_{row['id']}")
-            chk3 = st.checkbox("Já falou c/ contador?", value=bool(row.get("falou_contador", 0)),
-                               key=f"chk3_{idx}_{row['id']}")
-
-            c5, c6 = st.columns(2)
-            with c5:
-                resp_cont = st.text_input("RESPONSÁVEL INTERNO / CONTADOR",
-                                          value=str(row.get("responsavel_contador") or ""),
-                                          placeholder="Ex: João - Contador", key=f"resp_{idx}_{row['id']}")
-            with c6:
-                def_2027 = st.selectbox("DEFINIÇÃO PRELIMINAR 2027", ["Em análise", "Manter Simples", "Migrar"],
-                                        index=["Em análise", "Manter Simples", "Migrar"].index(
-                                            row.get("definicao_2027")) if row.get("definicao_2027") in ["Em análise",
-                                                                                                        "Manter Simples",
-                                                                                                        "Migrar"] else 0,
-                                        key=f"def_{idx}_{row['id']}")
-
-            c7, c8 = st.columns(2)
-            with c7:
-                val_prev = row.get("PREVISAO_RETORNO")
-                data_prev_ini = None
-                if val_prev and str(val_prev).strip() != "":
-                    try:
-                        data_prev_ini = datetime.strptime(str(val_prev).strip(), "%d/%m/%Y").date()
-                    except:
-                        pass
-                prev_obj = st.date_input("PREVISÃO RETORNO", value=data_prev_ini, format="DD/MM/YYYY",
-                                         key=f"prev_{idx}_{row['id']}")
-                prev = prev_obj.strftime("%d/%m/%Y") if prev_obj else ""
-            with c8:
-                val_prox = row.get("DATA_PROXIMO_CONTATO")
-                data_prox_ini = None
-                if val_prox and str(val_prox).strip() != "":
-                    try:
-                        data_prox_ini = datetime.strptime(str(val_prox).strip(), "%d/%m/%Y").date()
-                    except:
-                        pass
-                prox_contato_obj = st.date_input("DATA PRÓXIMO CONTATO", value=data_prox_ini, format="DD/MM/YYYY",
-                                                 key=f"prox_contato_{idx}_{row['id']}")
-                prox_contato = prox_contato_obj.strftime("%d/%m/%Y") if prox_contato_obj else ""
-
-            c9, c10 = st.columns(2)
-            with c9:
-                status = st.selectbox("STATUS OFICIAL",
-                                      ["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"],
-                                      index=["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"].index(
-                                          badge) if badge in ["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho",
-                                                              "Cinza"] else 0, key=f"stat_{idx}_{row['id']}")
-            with c10:
-                prox_acao = st.selectbox("PRÓXIMA AÇÃO", ["Nenhuma", "Aguardar retorno", "Reenviar e-mail", "Escalar p/ Fiscal"],
-                                         index=["Aguardar retorno", "Reenviar e-mail", "Escalar p/ Fiscal"].index(
-                                             row.get("proxima_acao")) if row.get("proxima_acao") in ["Aguardar retorno",
-                                                                                                     "Reenviar e-mail",
-                                                                                                     "Escalar p/ Fiscal"] else 0,
-                                         key=f"acao_{idx}_{row['id']}")
-
-            obs = st.text_area("OBSERVAÇÃO + EVIDÊNCIAS", value=str(row.get("observacao") or ""),
-                               key=f"obs_{idx}_{row['id']}", height=70)
-
-            if st.button("💾 SALVAR", key=f"btn_{idx}_{row['id']}", type="primary", use_container_width=True):
-                try:
-                    with engine.begin() as conn:
-                        conn.execute(text("""
-                                        UPDATE contatos SET 
-                                            DATA_CONTATO=:dc, CANAL_CONTATO=:cc, RECEBEU=:r, REENVIO_NECESSARIO=:rn,
-                                            ACOMPANHA_REFORMA=:ar, DISCUTIU_INTERNAMENTE=:di, FALOU_CONTADOR=:fc,
-                                            RESPONSAVEL_CONTADOR=:rc, DEFINICAO_2027=:d27, PREVISAO_RETORNO=:p,
-                                            DATA_PROXIMO_CONTATO=:dpc, STATUS=:s, PROXIMA_ACAO=:pa, OBSERVACAO=:o 
-                                        WHERE id=:id
-                                    """), {
-                            "dc": data_contato, "cc": canal_contato, "r": recebeu, "rn": reenvio,
-                            "ar": 1 if chk1 else 0, "di": 1 if chk2 else 0, "fc": 1 if chk3 else 0,
-                            "rc": resp_cont, "d27": def_2027, "p": prev, "dpc": prox_contato,
-                            "s": status, "pa": prox_acao, "o": obs, "id": int(row['id'])
-                        })
-                    st.success("✅ SALVO COM SUCESSO!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"❌ ERRO AO SALVAR: {e}")
+                        with engine.begin() as conn:
+                            conn.execute(text("""
+                                UPDATE contatos SET 
+                                    DATA_CONTATO=:dc, CANAL_CONTATO=:cc, RECEBEU=:r, REENVIO_NECESSARIO=:rn,
+                                    ACOMPANHA_REFORMA=:ar, DISCUTIU_INTERNAMENTE=:di, FALOU_CONTADOR=:fc,
+                                    RESPONSAVEL_CONTADOR=:rc, DEFINICAO_2027=:d27, PREVISAO_RETORNO=:p,
+                                    DATA_PROXIMO_CONTATO=:dpc, STATUS=:s, PROXIMA_ACAO=:pa, OBSERVACAO=:o 
+                                WHERE id=:id
+                            """), {
+                                "dc": data_contato, "cc": canal_contato, "r": recebeu, "rn": reenvio,
+                                "ar": 1 if chk1 else 0, "di": 1 if chk2 else 0, "fc": 1 if chk3 else 0,
+                                "rc": resp_cont, "d27": def_2027, "p": prev, "dpc": prox_contato,
+                                "s": status, "pa": prox_acao, "o": obs, "id": int(row['id'])
+                            })
+                        st.success("✅ SALVO COM SUCESSO!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ ERRO AO SALVAR: {e}")
