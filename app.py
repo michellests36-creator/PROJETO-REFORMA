@@ -4,6 +4,7 @@
 import streamlit as st
 import pandas as pd
 import os
+import time
 from datetime import datetime, date
 from sqlalchemy import create_engine, text
 
@@ -28,7 +29,6 @@ engine = create_engine(
     connect_args={"check_same_thread": False} if IS_SQLITE else {},
     pool_pre_ping=not IS_SQLITE,
 )
-
 
 # =============================================================================
 # BLOCO 2 - FUNÇÕES DE BANCO (COM ATUALIZAÇÃO AUTOMÁTICA DE COLUNAS)
@@ -184,6 +184,8 @@ if "usuario_logado" not in st.session_state:
     st.session_state.usuario_logado = None
 if "perfil" not in st.session_state:
     st.session_state.perfil = "Camila"
+if "trocando_perfil" not in st.session_state:
+    st.session_state.trocando_perfil = False
 
 
 def fazer_login(u, p):
@@ -231,9 +233,7 @@ if not st.session_state.autenticado:
         """, unsafe_allow_html=True)
     with right:
         st.markdown('<div class="login-card">', unsafe_allow_html=True)
-        st.markdown(
-            """<div style="color:white; font-size:20px; font-weight:800; margin-bottom:6px;">Bem-vindo de volta</div><div style="color:#5A7AA8; font-size:12px; margin-bottom:22px;">Use seu usuário de comprador para continuar</div>""",
-            unsafe_allow_html=True)
+        st.markdown("""<div style="color:white; font-size:20px; font-weight:800; margin-bottom:6px;">Bem-vindo de volta</div><div style="color:#5A7AA8; font-size:12px; margin-bottom:22px;">Use seu usuário de comprador para continuar</div>""", unsafe_allow_html=True)
         usuario_sel = st.selectbox("Usuário", COMPRADORES_CURTO, key="login_user_fix")
         senha_input = st.text_input("Senha", type="password", placeholder="Digite sua senha", key="login_pass_fix")
         if st.button("Entrar no portal →", use_container_width=True, type="primary", key="btn_login_fix"):
@@ -247,8 +247,76 @@ if not st.session_state.autenticado:
 # =============================================================================
 # BLOCO 5 - TELA PRINCIPAL E INTERFACE COMPLETA
 # =============================================================================
+# PERFORMANCE: cacheia a leitura da tabela por alguns segundos. O cache é
+# limpo manualmente logo após cada UPDATE bem-sucedido (e na troca de
+# comprador), então os dados nunca ficam desatualizados na tela.
+@st.cache_data(ttl=30, show_spinner=False)
+def carregar_contatos():
+    return pd.read_sql(text("SELECT * FROM contatos"), engine).fillna("")
+
+
+def tela_carregando(nome_perfil):
+    """Tela exibida rapidamente durante a troca de comprador, no mesmo
+    estilo visual da tela de login (cartão escuro + barra de progresso)."""
+    st.markdown(f"""
+    <style>
+    #MainMenu, footer, header {{visibility: hidden;}}
+    .stApp {{ background: #08162E !important; }}
+    .block-container {{ padding-top: 0 !important; max-width: 100% !important; }}
+    @keyframes mbp-loadbar {{
+        0% {{ left: -45%; }}
+        100% {{ left: 100%; }}
+    }}
+    @keyframes mbp-fadein {{
+        from {{ opacity: 0; transform: translateY(6px) scale(0.98); }}
+        to {{ opacity: 1; transform: translateY(0) scale(1); }}
+    }}
+    @keyframes mbp-pulse {{
+        0%, 100% {{ opacity: 0.4; }}
+        50% {{ opacity: 1; }}
+    }}
+    </style>
+    <div style="position:relative; display:flex; align-items:center; justify-content:center; height:78vh; overflow:hidden;">
+        <div style="position:absolute; width:420px; height:420px; border-radius:50%;
+                    background:radial-gradient(circle, rgba(255,192,0,0.10) 0%, rgba(255,192,0,0) 70%);
+                    pointer-events:none;"></div>
+        <div style="position:relative; background:#0F2242; border:1px solid #1E3A5F; border-radius:16px;
+                    padding:36px 40px; width:320px; text-align:center;
+                    box-shadow:0 20px 60px rgba(0,0,0,0.35);
+                    animation: mbp-fadein 0.35s ease-out;">
+            <div style="width:44px; height:44px; border-radius:12px; background:#ffc000; display:flex;
+                        align-items:center; justify-content:center; margin:0 auto 16px;
+                        font-weight:900; font-size:20px; color:#08162E;">M</div>
+            <div style="color:white; font-weight:800; font-size:14px; letter-spacing:0.5px;">GRUPO MBP</div>
+            <div style="color:#8BA3C7; font-size:12px; margin-top:6px; margin-bottom:20px;">
+                Preparando o portal de {nome_perfil}...
+            </div>
+            <div style="background:#132A4E; height:5px; border-radius:3px; overflow:hidden; position:relative;">
+                <div style="position:absolute; top:0; width:45%; height:100%; border-radius:3px;
+                            background:linear-gradient(90deg, rgba(255,192,0,0) 0%, #ffc000 50%, rgba(255,192,0,0) 100%);
+                            animation: mbp-loadbar 0.85s ease-in-out infinite;"></div>
+            </div>
+            <div style="color:#5A7AA8; font-size:10px; margin-top:14px;">
+                <span style="animation: mbp-pulse 1.2s ease-in-out infinite;">●</span>
+                &nbsp;Sincronizando dados do comprador
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
 perfil_curto = st.session_state.perfil
 active_key = KEY_MAP.get(perfil_curto, "perf_Camila")
+
+# Se acabamos de trocar de comprador, mostra a tela de carregamento por um
+# instante (garante que o cache de dados novos seja usado) e então segue
+# para o painel de verdade em uma nova rodada de execução.
+if st.session_state.trocando_perfil:
+    tela_carregando(perfil_curto)
+    time.sleep(0.45)
+    carregar_contatos.clear()
+    st.session_state.trocando_perfil = False
+    st.rerun()
 
 css_botoes_perfil = ""
 for nome, chave in KEY_MAP.items():
@@ -332,13 +400,15 @@ with st.sidebar:
         unsafe_allow_html=True)
 
     icones_perfil = {"Camila": "👤", "Gilcimar": "📊", "Janaina": "📑", "Maria Fatima": "📌", "Rafael": "📈",
-                     "Waldecir": "📋", "Gestão": "⚡"}
+                      "Waldecir": "📋", "Gestão": "⚡"}
 
     for nome in COMPRADORES_CURTO:
         ico = icones_perfil.get(nome, "•")
         if st.button(f"{ico}  {nome}", key=KEY_MAP[nome], use_container_width=True):
-            st.session_state.perfil = nome
-            st.rerun()
+            if nome != st.session_state.perfil:
+                st.session_state.perfil = nome
+                st.session_state.trocando_perfil = True
+                st.rerun()
 
     st.markdown("---")
     if st.button("🚪 Sair do Sistema", use_container_width=True, type="secondary"):
@@ -346,15 +416,6 @@ with st.sidebar:
         st.rerun()
 
 perfil_real = MAP_COMPRADOR[perfil_curto]
-
-
-# PERFORMANCE: cacheia a leitura da tabela por alguns segundos. O cache é
-# limpo manualmente logo após cada UPDATE bem-sucedido, então os dados nunca
-# ficam desatualizados na tela de quem acabou de salvar.
-@st.cache_data(ttl=30, show_spinner=False)
-def carregar_contatos():
-    return pd.read_sql(text("SELECT * FROM contatos"), engine).fillna("")
-
 
 df_all = carregar_contatos()
 
@@ -365,10 +426,10 @@ if perfil_curto == "Gestão":
     f1, f2, f3 = st.columns([3, 2, 1.5])
     with f1:
         filtro_comp = st.selectbox("Ver somente:",
-                                   ["Todos"] + [MAP_COMPRADOR[c] for c in COMPRADORES_CURTO if c != "Gestão"])
+                                    ["Todos"] + [MAP_COMPRADOR[c] for c in COMPRADORES_CURTO if c != "Gestão"])
     with f2:
         filtro_status = st.selectbox("Status:",
-                                     ["Todos", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza", "Pendente"])
+                                      ["Todos", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza", "Pendente"])
     with f3:
         busca = st.text_input("Buscar:", placeholder="Fornecedor")
 
@@ -376,8 +437,7 @@ if perfil_curto == "Gestão":
     if filtro_comp != "Todos":
         df_f = df_f[df_f["comprador"] == filtro_comp]
     if filtro_status != "Todos":
-        df_f = df_f[
-            df_f["status"].str.contains(filtro_status, case=False, na=False)] if filtro_status != "Pendente" else df_f[
+        df_f = df_f[df_f["status"].str.contains(filtro_status, case=False, na=False)] if filtro_status != "Pendente" else df_f[
             df_f["status"].isin(["", "Pendente", "None"])]
     if busca:
         df_f = df_f[df_f["fornecedor"].str.contains(busca, case=False, na=False)]
@@ -424,11 +484,11 @@ st.markdown(
 f_busca1, f_busca2, f_busca3, f_busca4 = st.columns([3, 1.5, 1, 1])
 with f_busca1:
     busca_comprador = st.text_input("🔍 Buscar fornecedor rápido:", placeholder="Ex: GRUPO ROCHA",
-                                    key=f"busca_{perfil_curto}")
+                                     key=f"busca_{perfil_curto}")
 with f_busca2:
     filtro_status_c = st.selectbox("Status:",
-                                   ["Todos", "Pendente", "Vermelho", "Amarelo", "Verde", "Laranja", "Cinza"],
-                                   key=f"fstat_{perfil_curto}")
+                                    ["Todos", "Pendente", "Vermelho", "Amarelo", "Verde", "Laranja", "Cinza"],
+                                    key=f"fstat_{perfil_curto}")
 
 df_filtrado = df.copy()
 if busca_comprador:
@@ -452,8 +512,7 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
 
     bc = "Pendente" if badge in ["", "Pendente"] else (
         "Verde" if "VERDE" in badge.upper() else "Amarelo" if "AMARELO" in badge.upper() else "Vermelho" if "VERMELHO" in badge.upper() else "Laranja" if "LARANJA" in badge.upper() else "Cinza")
-    icon = "⚪" if badge in ["",
-                            "Pendente"] else "🟢" if bc == "Verde" else "🔴" if bc == "Vermelho" else "🟡" if bc == "Amarelo" else "🟠"
+    icon = "⚪" if badge in ["", "Pendente"] else "🟢" if bc == "Verde" else "🔴" if bc == "Vermelho" else "🟡" if bc == "Amarelo" else "🟠"
 
     titulo = f"{icon} {row.get('fornecedor')}"
 
@@ -487,8 +546,7 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                         except Exception:
                             pass
 
-                    data_contato_obj = st.date_input("DATA DO CONTATO", value=data_inicial, format="DD/MM/YYYY",
-                                                     key=f"data_contato_{idx}_{row['id']}")
+                    data_contato_obj = st.date_input("DATA DO CONTATO", value=data_inicial, format="DD/MM/YYYY", key=f"data_contato_{idx}_{row['id']}")
                     data_contato = data_contato_obj.strftime("%d/%m/%Y") if data_contato_obj else ""
                 with c2:
                     # FIX: era row.get("CANAL_CONTATO") -> coluna real é "canal_contato"
@@ -502,32 +560,22 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                 c3, c4 = st.columns(2)
                 with c3:
                     recebeu = st.selectbox("RECEBEU COMUNICADO?", ["Pendente", "Sim", "Não"],
-                                           index=["Pendente", "Sim", "Não"].index(recebeu_val) if recebeu_val in [
-                                               "Pendente", "Sim", "Não"] else 0, key=f"rec_{idx}_{row['id']}")
+                                            index=["Pendente", "Sim", "Não"].index(recebeu_val) if recebeu_val in ["Pendente", "Sim", "Não"] else 0, key=f"rec_{idx}_{row['id']}")
                 with c4:
                     reenvio = st.selectbox("REENVIO NECESSÁRIO?", ["Não", "Sim"],
-                                           index=["Não", "Sim"].index(row.get("reenvio_necessario")) if row.get(
-                                               "reenvio_necessario") in ["Não", "Sim"] else 0,
-                                           key=f"reenvio_{idx}_{row['id']}")
+                                            index=["Não", "Sim"].index(row.get("reenvio_necessario")) if row.get("reenvio_necessario") in ["Não", "Sim"] else 0, key=f"reenvio_{idx}_{row['id']}")
 
-                chk1 = st.checkbox("Já acompanha Reforma?", value=bool(row.get("acompanha_reforma", 0)),
-                                   key=f"chk1_{idx}_{row['id']}")
-                chk2 = st.checkbox("Já discutiu internamente?", value=bool(row.get("discutiu_internamente", 0)),
-                                   key=f"chk2_{idx}_{row['id']}")
-                chk3 = st.checkbox("Já falou c/ contador?", value=bool(row.get("falou_contador", 0)),
-                                   key=f"chk3_{idx}_{row['id']}")
+                chk1 = st.checkbox("Já acompanha Reforma?", value=bool(row.get("acompanha_reforma", 0)), key=f"chk1_{idx}_{row['id']}")
+                chk2 = st.checkbox("Já discutiu internamente?", value=bool(row.get("discutiu_internamente", 0)), key=f"chk2_{idx}_{row['id']}")
+                chk3 = st.checkbox("Já falou c/ contador?", value=bool(row.get("falou_contador", 0)), key=f"chk3_{idx}_{row['id']}")
 
                 c5, c6 = st.columns(2)
                 with c5:
-                    resp_cont = st.text_input("RESPONSÁVEL INTERNO / CONTADOR",
-                                              value=str(row.get("responsavel_contador") or ""),
-                                              placeholder="Ex: João - Contador", key=f"resp_{idx}_{row['id']}")
+                    resp_cont = st.text_input("RESPONSÁVEL INTERNO / CONTADOR", value=str(row.get("responsavel_contador") or ""), placeholder="Ex: João - Contador", key=f"resp_{idx}_{row['id']}")
                 with c6:
                     def_2027 = st.selectbox("DEFINIÇÃO PRELIMINAR 2027", ["Em análise", "Manter Simples", "Migrar"],
-                                            index=["Em análise", "Manter Simples", "Migrar"].index(
-                                                row.get("definicao_2027")) if row.get("definicao_2027") in [
-                                                "Em análise", "Manter Simples", "Migrar"] else 0,
-                                            key=f"def_{idx}_{row['id']}")
+                                             index=["Em análise", "Manter Simples", "Migrar"].index(row.get("definicao_2027")) if row.get("definicao_2027") in ["Em análise", "Manter Simples", "Migrar"] else 0,
+                                             key=f"def_{idx}_{row['id']}")
 
                 c7, c8 = st.columns(2)
                 with c7:
@@ -539,8 +587,7 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                             data_prev_ini = datetime.strptime(str(val_prev).strip(), "%d/%m/%Y").date()
                         except Exception:
                             pass
-                    prev_obj = st.date_input("PREVISÃO RETORNO", value=data_prev_ini, format="DD/MM/YYYY",
-                                             key=f"prev_{idx}_{row['id']}")
+                    prev_obj = st.date_input("PREVISÃO RETORNO", value=data_prev_ini, format="DD/MM/YYYY", key=f"prev_{idx}_{row['id']}")
                     prev = prev_obj.strftime("%d/%m/%Y") if prev_obj else ""
                 with c8:
                     # FIX: era row.get("DATA_PROXIMO_CONTATO") -> coluna real é "data_proximo_contato"
@@ -551,29 +598,23 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                             data_prox_ini = datetime.strptime(str(val_prox).strip(), "%d/%m/%Y").date()
                         except Exception:
                             pass
-                    prox_contato_obj = st.date_input("DATA PRÓXIMO CONTATO", value=data_prox_ini, format="DD/MM/YYYY",
-                                                     key=f"prox_contato_{idx}_{row['id']}")
+                    prox_contato_obj = st.date_input("DATA PRÓXIMO CONTATO", value=data_prox_ini, format="DD/MM/YYYY", key=f"prox_contato_{idx}_{row['id']}")
                     prox_contato = prox_contato_obj.strftime("%d/%m/%Y") if prox_contato_obj else ""
 
                 c9, c10 = st.columns(2)
                 with c9:
-                    status = st.selectbox("STATUS OFICIAL",
-                                          ["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"],
-                                          index=["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"].index(
-                                              badge) if badge in ["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho",
-                                                                  "Cinza"] else 0, key=f"stat_{idx}_{row['id']}")
+                    status = st.selectbox("STATUS OFICIAL", ["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"],
+                                           index=["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"].index(badge) if badge in ["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"] else 0, key=f"stat_{idx}_{row['id']}")
                 with c10:
                     # FIX: lista de opções e lista usada no .index() agora são a mesma
                     # (antes o .index() usava uma lista sem "Nenhuma" e deslocava a seleção).
                     valor_acao_atual = row.get("proxima_acao")
                     prox_acao = st.selectbox(
                         "PRÓXIMA AÇÃO", OPCOES_PROXIMA_ACAO,
-                        index=OPCOES_PROXIMA_ACAO.index(
-                            valor_acao_atual) if valor_acao_atual in OPCOES_PROXIMA_ACAO else 0,
+                        index=OPCOES_PROXIMA_ACAO.index(valor_acao_atual) if valor_acao_atual in OPCOES_PROXIMA_ACAO else 0,
                         key=f"acao_{idx}_{row['id']}")
 
-                obs = st.text_area("OBSERVAÇÃO + EVIDÊNCIAS", value=str(row.get("observacao") or ""),
-                                   key=f"obs_{idx}_{row['id']}", height=70)
+                obs = st.text_area("OBSERVAÇÃO + EVIDÊNCIAS", value=str(row.get("observacao") or ""), key=f"obs_{idx}_{row['id']}", height=70)
 
                 # Dentro do form, o st.form_submit_button substitui o st.button comum
                 submitted = st.form_submit_button("💾 SALVAR", use_container_width=True)
