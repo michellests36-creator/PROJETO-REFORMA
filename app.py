@@ -380,11 +380,9 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
             </div>
             """, unsafe_allow_html=True)
 
-            from datetime import datetime, date
-
             c1, c2 = st.columns(2)
             with c1:
-                # Se não houver data salva, define como None (campo limpo)
+                from datetime import datetime, date
                 val_data = row.get("DATA_CONTATO")
                 data_inicial = None
                 if val_data and str(val_data).strip() != "":
@@ -394,59 +392,44 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                         pass
 
                 data_contato_obj = st.date_input("DATA DO CONTATO", value=data_inicial, format="DD/MM/YYYY",
-                                                 key=f"data_contato_{row['id']}")
+                                                 key=f"data_contato_{idx}_{row['id']}")
                 data_contato = data_contato_obj.strftime("%d/%m/%Y") if data_contato_obj else ""
             with c2:
                 canal_contato = st.selectbox("CANAL", ["LIGAÇÃO/WHATS", "E-MAIL", "REUNIÃO", "OUTRO"],
                                              index=["LIGAÇÃO/WHATS", "E-MAIL", "REUNIÃO", "OUTRO"].index(
                                                  row.get("CANAL_CONTATO")) if row.get("CANAL_CONTATO") in [
                                                  "LIGAÇÃO/WHATS", "E-MAIL", "REUNIÃO", "OUTRO"] else 0,
-                                             key=f"canal_{row['id']}")
+                                             key=f"canal_{idx}_{row['id']}")
 
             c3, c4 = st.columns(2)
             with c3:
                 recebeu = st.selectbox("RECEBEU COMUNICADO?", ["Pendente", "Sim", "Não"],
                                        index=["Pendente", "Sim", "Não"].index(recebeu_val) if recebeu_val in [
-                                           "Pendente", "Sim", "Não"] else 0, key=f"rec_{row['id']}")
+                                           "Pendente", "Sim", "Não"] else 0, key=f"rec_{idx}_{row['id']}")
             with c4:
                 reenvio = st.selectbox("REENVIO NECESSÁRIO?", ["Não", "Sim"],
                                        index=["Não", "Sim"].index(row.get("reenvio_necessario")) if row.get(
-                                           "reenvio_necessario") in ["Não", "Sim"] else 0, key=f"reenvio_{row['id']}")
+                                           "reenvio_necessario") in ["Não", "Sim"] else 0, key=f"reenvio_{idx}_{row['id']}")
 
             chk1 = st.checkbox("Já acompanha Reforma?", value=bool(row.get("acompanha_reforma", 0)),
-                               key=f"chk1_{row['id']}")
+                               key=f"chk1_{idx}_{row['id']}")
             chk2 = st.checkbox("Já discutiu internamente?", value=bool(row.get("discutiu_internamente", 0)),
-                               key=f"chk2_{row['id']}")
+                               key=f"chk2_{idx}_{row['id']}")
             chk3 = st.checkbox("Já falou c/ contador?", value=bool(row.get("falou_contador", 0)),
-                               key=f"chk3_{row['id']}")
+                               key=f"chk3_{idx}_{row['id']}")
 
             c5, c6 = st.columns(2)
             with c5:
                 resp_cont = st.text_input("RESPONSÁVEL INTERNO / CONTADOR",
                                           value=str(row.get("responsavel_contador") or ""),
-                                          placeholder="Ex: João - Contador", key=f"resp_{row['id']}")
+                                          placeholder="Ex: João - Contador", key=f"resp_{idx}_{row['id']}")
             with c6:
                 def_2027 = st.selectbox("DEFINIÇÃO PRELIMINAR 2027", ["Em análise", "Manter Simples", "Migrar"],
                                         index=["Em análise", "Manter Simples", "Migrar"].index(
                                             row.get("definicao_2027")) if row.get("definicao_2027") in ["Em análise",
                                                                                                         "Manter Simples",
                                                                                                         "Migrar"] else 0,
-                                        key=f"def_{row['id']}")
-
-            c5, c6 = st.columns(2)
-            with c5:
-                resp_cont = st.text_input("RESPONSÁVEL INTERNO / CONTADOR",
-                                          value=str(row.get("responsavel_contador") or ""),
-                                          placeholder="Ex: João - Contador", key=f"resp_{row['id']}")
-            with c6:
-                def_2027 = st.selectbox("DEFINIÇÃO PRELIMINAR 2027", ["Em análise", "Manter Simples", "Migrar"],
-                                        index=["Em análise", "Manter Simples", "Migrar"].index(
-                                            row.get("definicao_2027")) if row.get("definicao_2027") in ["Em análise",
-                                                                                                        "Manter Simples",
-                                                                                                        "Migrar"] else 0,
-                                        key=f"def_{row['id']}")
-
-            from datetime import datetime, date
+                                        key=f"def_{idx}_{row['id']}")
 
             c7, c8 = st.columns(2)
             with c7:
@@ -458,7 +441,7 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                     except:
                         pass
                 prev_obj = st.date_input("PREVISÃO RETORNO", value=data_prev_ini, format="DD/MM/YYYY",
-                                         key=f"prev_{row['id']}")
+                                         key=f"prev_{idx}_{row['id']}")
                 prev = prev_obj.strftime("%d/%m/%Y") if prev_obj else ""
             with c8:
                 val_prox = row.get("DATA_PROXIMO_CONTATO")
@@ -469,27 +452,28 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                     except:
                         pass
                 prox_contato_obj = st.date_input("DATA PRÓXIMO CONTATO", value=data_prox_ini, format="DD/MM/YYYY",
-                                                 key=f"prox_contato_{row['id']}")
+                                                 key=f"prox_contato_{idx}_{row['id']}")
                 prox_contato = prox_contato_obj.strftime("%d/%m/%Y") if prox_contato_obj else ""
+
             c9, c10 = st.columns(2)
             with c9:
                 status = st.selectbox("STATUS OFICIAL",
                                       ["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"],
                                       index=["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"].index(
                                           badge) if badge in ["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho",
-                                                              "Cinza"] else 0, key=f"stat_{row['id']}")
+                                                              "Cinza"] else 0, key=f"stat_{idx}_{row['id']}")
             with c10:
                 prox_acao = st.selectbox("PRÓXIMA AÇÃO", ["Nenhuma", "Aguardar retorno", "Reenviar e-mail", "Escalar p/ Fiscal"],
                                          index=["Aguardar retorno", "Reenviar e-mail", "Escalar p/ Fiscal"].index(
                                              row.get("proxima_acao")) if row.get("proxima_acao") in ["Aguardar retorno",
                                                                                                      "Reenviar e-mail",
                                                                                                      "Escalar p/ Fiscal"] else 0,
-                                         key=f"acao_{row['id']}")
+                                         key=f"acao_{idx}_{row['id']}")
 
             obs = st.text_area("OBSERVAÇÃO + EVIDÊNCIAS", value=str(row.get("observacao") or ""),
-                               key=f"obs_{row['id']}", height=70)
+                               key=f"obs_{idx}_{row['id']}", height=70)
 
-            if st.button("💾 SALVAR", key=f"btn_{row['id']}", type="primary", use_container_width=True):
+            if st.button("💾 SALVAR", key=f"btn_{idx}_{row['id']}", type="primary", use_container_width=True):
                 try:
                     with engine.begin() as conn:
                         conn.execute(text("""
