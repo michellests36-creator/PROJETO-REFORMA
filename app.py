@@ -114,7 +114,6 @@ KEY_MAP = {"Camila": "perf_Camila", "Gilcimar": "perf_Gilcimar","Janaina": "perf
 if "autenticado" not in st.session_state: st.session_state.autenticado = False
 if "usuario_logado" not in st.session_state: st.session_state.usuario_logado = None
 if "perfil" not in st.session_state: st.session_state.perfil = "Camila"
-if "expand_all" not in st.session_state: st.session_state.expand_all = False
 
 def fazer_login(u, p):
     if u in USUARIOS and USUARIOS[u]["senha"] == p:
@@ -336,10 +335,6 @@ with f_busca1: busca_comprador = st.text_input("🔍 Buscar fornecedor rápido:"
 with f_busca2: filtro_status_c = st.selectbox("Status:",
                                               ["Todos", "Pendente", "Vermelho", "Amarelo", "Verde", "Laranja", "Cinza"],
                                               key=f"fstat_{perfil_curto}")
-with f_busca3:
-    if st.button("📂 Expandir", use_container_width=True): st.session_state.expand_all = True; st.rerun()
-with f_busca4:
-    if st.button("📁 Recolher", use_container_width=True): st.session_state.expand_all = False; st.rerun()
 
 df_filtrado = df.copy()
 if busca_comprador:
@@ -365,7 +360,7 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
     titulo = f"{icon} {row.get('fornecedor')}"
 
     with target:
-        with st.expander(titulo, expanded=st.session_state.get('expand_all', False)):
+        with st.expander(titulo, expanded=False):
             st.markdown(f"""
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid #E5E7EB; padding-bottom: 10px;">
                 <div>
