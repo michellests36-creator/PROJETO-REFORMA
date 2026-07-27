@@ -417,7 +417,11 @@ with st.sidebar:
 
 perfil_real = MAP_COMPRADOR[perfil_curto]
 
-df_all = carregar_contatos()
+# LOADING ATÉ ATUALIZAR
+import time
+with st.spinner("⏳ Carregando dados..."):
+    df_all = carregar_contatos()
+    time.sleep(0.3)  # só pra dar o efeito visual
 
 if perfil_curto == "Gestão":
     st.markdown(f"""<div style="font-size:22px; font-weight:800; color:#111827; margin:10px 0;">🏢 Fornecedores • Gestão</div>""", unsafe_allow_html=True)
