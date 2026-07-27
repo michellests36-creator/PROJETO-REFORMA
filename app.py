@@ -631,7 +631,7 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                                 WHERE id=:id
                             """), {
                                 "dc": data_contato, "cc": canal_contato, "r": recebeu, "rn": reenvio,
-                                "ar": 1 if chk1 else 0, "di": 1 if chk2 else 0, "fc": 1 if chk3 else 0,g
+                                "ar": 1 if chk1 else 0, "di": 1 if chk2 else 0, "fc": 1 if chk3 else 0,
                                 "rc": resp_cont, "d27": def_2027, "p": prev, "dpc": prox_contato,
                                 "s": status, "pa": prox_acao, "o": obs, "id": int(row['id'])
                             })
