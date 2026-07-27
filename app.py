@@ -603,7 +603,7 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
 
                 c9, c10 = st.columns(2)
                 with c9:
-                    status = st.selectbox("STATUS OFICIAL", ["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"],
+                    status = st.selectbox("STATUS OFICIAL", ["Pendente - Fornecedor Não contatado", "Verde -Confirmado", "Amarelo - Em avaliação", "Laranja - Sem definição", "Vermelho - - Não pretende alterar", "Cinza - Não localizado"],
                                            index=["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"].index(badge) if badge in ["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"] else 0, key=f"stat_{idx}_{row['id']}")
                 with c10:
                     # FIX: lista de opções e lista usada no .index() agora são a mesma
@@ -631,7 +631,7 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                                 WHERE id=:id
                             """), {
                                 "dc": data_contato, "cc": canal_contato, "r": recebeu, "rn": reenvio,
-                                "ar": 1 if chk1 else 0, "di": 1 if chk2 else 0, "fc": 1 if chk3 else 0,
+                                "ar": 1 if chk1 else 0, "di": 1 if chk2 else 0, "fc": 1 if chk3 else 0,g
                                 "rc": resp_cont, "d27": def_2027, "p": prev, "dpc": prox_contato,
                                 "s": status, "pa": prox_acao, "o": obs, "id": int(row['id'])
                             })
