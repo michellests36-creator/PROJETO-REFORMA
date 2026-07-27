@@ -420,60 +420,49 @@ perfil_real = MAP_COMPRADOR[perfil_curto]
 df_all = carregar_contatos()
 
 if perfil_curto == "Gestão":
-    st.markdown(
-        f"""<div style="font-size:20px; font-weight:800; color:#111827; margin:10px 0;">🏢 Fornecedores • Gestão</div>""",
-        unsafe_allow_html=True)
-    f1, f2, f3 = st.columns([3, 2, 1.5])
+    st.markdown(f"""<div style="font-size:22px; font-weight:800; color:#111827; margin:10px 0;">🏢 Fornecedores • Gestão</div>""", unsafe_allow_html=True)
+
+    f1, f2 = st.columns([3, 2])
     with f1:
-        filtro_comp = st.selectbox("Ver somente:",
-                                    ["Todos"] + [MAP_COMPRADOR[c] for c in COMPRADORES_CURTO if c != "Gestão"])
+        filtro_comp = st.selectbox("Ver somente:", ["Todos"] + [MAP_COMPRADOR[c] for c in COMPRADORES_CURTO if c!= "Gestão"])
     with f2:
-        filtro_status = st.selectbox("Status:",
-                                      ["Todos", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza", "Pendente"])
-    with f3:
         busca = st.text_input("Buscar:", placeholder="Fornecedor")
 
     df_f = df_all.copy()
-    if filtro_comp != "Todos":
-        df_f = df_f[df_f["comprador"] == filtro_comp]
-    if filtro_status != "Todos":
-        df_f = df_f[df_f["status"].str.contains(filtro_status, case=False, na=False)] if filtro_status != "Pendente" else df_f[
-            df_f["status"].isin(["", "Pendente", "None"])]
+    if filtro_comp!= "Todos":
+        comp_curto_sel = [k for k,v in MAP_COMPRADOR.items() if v == filtro_comp][0]
+        df_f = df_f[df_f["comprador"].astype(str).str.upper().str.contains(comp_curto_sel.upper())]
     if busca:
-        df_f = df_f[df_f["fornecedor"].str.contains(busca, case=False, na=False)]
+        df_f = df_f[df_f["fornecedor"].astype(str).str.upper().str.contains(busca.upper())]
+
+    status_counts = df_f["status"].fillna("Pendente").replace("", "Pendente").value_counts()
+    def get(s): return int(status_counts.get(s, 0))
 
     total = len(df_f)
-    cont = len(df_f[~df_f["status"].isin(["", "Pendente", "None"])])
-    pendentes_total = total - cont
-    perc = cont / total * 100 if total else 0
+    verde, amarelo, laranja, vermelho, cinza, pendente = get("Verde"), get("Amarelo"), get("Laranja"), get("Vermelho"), get("Cinza"), get("Pendente")
 
-    m1, m2, m3, m4 = st.columns(4)
-    with m1:
-        st.markdown(
-            f'<div style="background:white; border:1px solid #E5E7EB; border-radius:14px; padding:16px;"><div style="font-size:10px; color:#6B7280; font-weight:700;">TOTAL</div><div style="font-size:24px; font-weight:900; color:#111827;">{total}</div></div>',
-            unsafe_allow_html=True)
-    with m2:
-        st.markdown(
-            f'<div style="background:white; border:1px solid #E5E7EB; border-radius:14px; padding:16px;"><div style="font-size:10px; color:#6B7280; font-weight:700;">ATENDIDOS</div><div style="font-size:24px; font-weight:900; color:#065F46;">{cont}</div></div>',
-            unsafe_allow_html=True)
-    with m3:
-        st.markdown(
-            f'<div style="background:white; border:1px solid #E5E7EB; border-radius:14px; padding:16px;"><div style="font-size:10px; color:#6B7280; font-weight:700;">PENDENTES</div><div style="font-size:24px; font-weight:900; color:#111827;">{pendentes_total}</div></div>',
-            unsafe_allow_html=True)
-    with m4:
-        st.markdown(
-            f'<div style="background:white; border:1px solid #E5E7EB; border-radius:14px; padding:16px;"><div style="font-size:10px; color:#6B7280; font-weight:700;">% CONCLUSÃO</div><div style="font-size:24px; font-weight:900; color:#111827;">{perc:.1f}%</div></div>',
-            unsafe_allow_html=True)
+    # === SÓ CARTÕES COLORIDOS ===
+    st.markdown("""
+    <style>
+   .card {border-radius:10px; padding:12px; text-align:center; color:white; font-weight:800;}
+   .c-verde{background:#16A34A}.c-amarelo{background:#CA8A04}.c-laranja{background:#EA580C}
+   .c-vermelho{background:#DC2626}.c-cinza{background:#6B7280}.c-pendente{background:#111827}.c-total{background:#E5E7EB; color:#111827; border:1px solid #D1D5DB}
+    </style>
+    """, unsafe_allow_html=True)
 
-    st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-    # Só mostra o que foi preenchido no contato
-    colunas_gestao = ["fornecedor", "comprador", "categoria", "status", "recebeu", "data_contato", "canal_contato",
-                      "previsao_retorno", "responsavel_contador", "definicao_2027", "observacao"]
-    # Filtra só colunas que existem
+    a,b,c,d,e,f,g = st.columns(7)
+    with a: st.markdown(f'<div class="card c-total">{total}<br><small>TOTAL</small></div>', unsafe_allow_html=True)
+    with b: st.markdown(f'<div class="card c-verde">{verde}<br><small>VERDE</small></div>', unsafe_allow_html=True)
+    with c: st.markdown(f'<div class="card c-amarelo">{amarelo}<br><small>AMARELO</small></div>', unsafe_allow_html=True)
+    with d: st.markdown(f'<div class="card c-laranja">{laranja}<br><small>LARANJA</small></div>', unsafe_allow_html=True)
+    with e: st.markdown(f'<div class="card c-vermelho">{vermelho}<br><small>VERMELHO</small></div>', unsafe_allow_html=True)
+    with f: st.markdown(f'<div class="card c-cinza">{cinza}<br><small>CINZA</small></div>', unsafe_allow_html=True)
+    with g: st.markdown(f'<div class="card c-pendente">{pendente}<br><small>PENDENTE</small></div>', unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top:15px'></div>", unsafe_allow_html=True)
+    colunas_gestao = ["fornecedor", "comprador", "categoria", "status", "recebeu", "data_contato", "canal_contato", "previsao_retorno", "responsavel_contador", "definicao_2027", "observacao"]
     colunas_gestao = [c for c in colunas_gestao if c in df_f.columns]
-
     st.dataframe(df_f[colunas_gestao], use_container_width=True, height=550)
-
     st.stop()
 
 # COMPRADOR
