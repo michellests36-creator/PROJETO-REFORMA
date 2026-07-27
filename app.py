@@ -580,9 +580,19 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                 with c5:
                     resp_cont = st.text_input("RESPONSÁVEL INTERNO / CONTADOR", value=str(row.get("responsavel_contador") or ""), placeholder="Ex: João - Contador", key=f"resp_{idx}_{row['id']}")
                 with c6:
-                    def_2027 = st.selectbox("DEFINIÇÃO PRELIMINAR 2027", ["Em análise", "Manter Simples", "Migrar"],
-                                             index=["Em análise", "Manter Simples", "Migrar"].index(row.get("definicao_2027")) if row.get("definicao_2027") in ["Em análise", "Manter Simples", "Migrar"] else 0,
-                                             key=f"def_{idx}_{row['id']}")
+                    opcoes_2027 = [
+                        "Em análise",
+                        "Manter Simples Nacional",
+                        "Migrar para Simples Híbrido",
+                        "Migrar para Lucro Presumido",
+                        "Migrar para Lucro Real",
+                        "Aguardando orientação contábil",
+                        "Ainda sem definição",
+                        "Não informado"
+                    ]
+                    def_2027 = st.selectbox("DEFINIÇÃO PRELIMINAR 2027", opcoes_2027,
+                                            index=opcoes_2027.index(row.get("definicao_2027")) if row.get(
+                                                "definicao_2027") in opcoes_2027 else 0, key=f"def_{idx}_{row['id']}")
 
                 c7, c8 = st.columns(2)
                 with c7:
