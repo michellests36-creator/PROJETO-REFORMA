@@ -466,7 +466,14 @@ if perfil_curto == "Gestão":
             unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-    st.dataframe(df_f, use_container_width=True, height=450)
+    # Só mostra o que foi preenchido no contato
+    colunas_gestao = ["fornecedor", "comprador", "categoria", "status", "recebeu", "data_contato", "canal_contato",
+                      "previsao_retorno", "responsavel_contador", "definicao_2027", "observacao"]
+    # Filtra só colunas que existem
+    colunas_gestao = [c for c in colunas_gestao if c in df_f.columns]
+
+    st.dataframe(df_f[colunas_gestao], use_container_width=True, height=550)
+
     st.stop()
 
 # COMPRADOR
