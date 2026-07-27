@@ -421,7 +421,7 @@ perfil_real = MAP_COMPRADOR[perfil_curto]
 import time
 with st.spinner("⏳ Carregando dados..."):
     df_all = carregar_contatos()
-    time.sleep(0.3)  # só pra dar o efeito visual
+    time.sleep(1.0)  # só pra dar o efeito visual
 
 if perfil_curto == "Gestão":
     st.markdown(f"""<div style="font-size:22px; font-weight:800; color:#111827; margin:10px 0;">🏢 Fornecedores • Gestão</div>""", unsafe_allow_html=True)
