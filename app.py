@@ -438,29 +438,57 @@ if perfil_curto == "Gestão":
     status_counts = df_f["status"].fillna("Pendente").replace("", "Pendente").value_counts()
     def get(s): return int(status_counts.get(s, 0))
 
+
     total = len(df_f)
-    verde, amarelo, laranja, vermelho, cinza, pendente = get("Verde"), get("Amarelo"), get("Laranja"), get("Vermelho"), get("Cinza"), get("Pendente")
+    verde, amarelo, laranja, vermelho, cinza, pendente = get("Verde"), get("Amarelo"), get("Laranja"), get(
+        "Vermelho"), get("Cinza"), get("Pendente")
 
-    # === SÓ CARTÕES COLORIDOS ===
+    atendidos = total - pendente
+    perc = (atendidos / total * 100) if total > 0 else 0
+
+    # === BARRA DE PORCENTAGEM QUE FALTAVA ===
+    st.markdown(f"""
+     <div style="display:flex; gap:15px; margin-bottom:10px;">
+         <div style="background:white; border:1px solid #E5E7EB; border-radius:10px; padding:10px 20px;">
+             <div style="font-size:11px; color:#6B7280; font-weight:700;">ATENDIDOS</div>
+             <div style="font-size:22px; font-weight:900;">{atendidos} <span style="font-size:14px; color:#16A34A;">{perc:.1f}%</span></div>
+         </div>
+         <div style="background:white; border:1px solid #E5E7EB; border-radius:10px; padding:10px 20px;">
+             <div style="font-size:11px; color:#6B7280; font-weight:700;">PENDENTES</div>
+             <div style="font-size:22px; font-weight:900;">{pendente} <span style="font-size:14px; color:#DC2626;">{100 - perc:.1f}%</span></div>
+         </div>
+     </div>
+     """, unsafe_allow_html=True)
+    st.progress(perc / 100)
+
+    # === CARTÕES COLORIDOS ===
     st.markdown("""
-    <style>
-   .card {border-radius:10px; padding:12px; text-align:center; color:white; font-weight:800;}
-   .c-verde{background:#16A34A}.c-amarelo{background:#CA8A04}.c-laranja{background:#EA580C}
-   .c-vermelho{background:#DC2626}.c-cinza{background:#6B7280}.c-pendente{background:#111827}.c-total{background:#E5E7EB; color:#111827; border:1px solid #D1D5DB}
-    </style>
-    """, unsafe_allow_html=True)
+     <style>
+    .card {border-radius:10px; padding:12px; text-align:center; color:white; font-weight:800;}
+    .c-verde{background:#16A34A}.c-amarelo{background:#CA8A04}.c-laranja{background:#EA580C}
+    .c-vermelho{background:#DC2626}.c-cinza{background:#6B7280}.c-pendente{background:#111827}.c-total{background:#E5E7EB; color:#111827; border:1px solid #D1D5DB}
+     </style>
+     """, unsafe_allow_html=True)
 
-    a,b,c,d,e,f,g = st.columns(7)
-    with a: st.markdown(f'<div class="card c-total">{total}<br><small>TOTAL</small></div>', unsafe_allow_html=True)
-    with b: st.markdown(f'<div class="card c-verde">{verde}<br><small>VERDE</small></div>', unsafe_allow_html=True)
-    with c: st.markdown(f'<div class="card c-amarelo">{amarelo}<br><small>AMARELO</small></div>', unsafe_allow_html=True)
-    with d: st.markdown(f'<div class="card c-laranja">{laranja}<br><small>LARANJA</small></div>', unsafe_allow_html=True)
-    with e: st.markdown(f'<div class="card c-vermelho">{vermelho}<br><small>VERMELHO</small></div>', unsafe_allow_html=True)
-    with f: st.markdown(f'<div class="card c-cinza">{cinza}<br><small>CINZA</small></div>', unsafe_allow_html=True)
-    with g: st.markdown(f'<div class="card c-pendente">{pendente}<br><small>PENDENTE</small></div>', unsafe_allow_html=True)
+    a, b, c, d, e, f, g = st.columns(7)
+    with a:
+        st.markdown(f'<div class="card c-total">{total}<br><small>TOTAL</small></div>', unsafe_allow_html=True)
+    with b:
+        st.markdown(f'<div class="card c-verde">{verde}<br><small>VERDE</small></div>', unsafe_allow_html=True)
+    with c:
+        st.markdown(f'<div class="card c-amarelo">{amarelo}<br><small>AMARELO</small></div>', unsafe_allow_html=True)
+    with d:
+        st.markdown(f'<div class="card c-laranja">{laranja}<br><small>LARANJA</small></div>', unsafe_allow_html=True)
+    with e:
+        st.markdown(f'<div class="card c-vermelho">{vermelho}<br><small>VERMELHO</small></div>', unsafe_allow_html=True)
+    with f:
+        st.markdown(f'<div class="card c-cinza">{cinza}<br><small>CINZA</small></div>', unsafe_allow_html=True)
+    with g:
+        st.markdown(f'<div class="card c-pendente">{pendente}<br><small>PENDENTE</small></div>', unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top:15px'></div>", unsafe_allow_html=True)
-    colunas_gestao = ["fornecedor", "comprador", "categoria", "status", "recebeu", "data_contato", "canal_contato", "previsao_retorno", "responsavel_contador", "definicao_2027", "observacao"]
+    colunas_gestao = ["fornecedor", "comprador", "categoria", "status", "recebeu", "data_contato", "canal_contato",
+                      "previsao_retorno", "responsavel_contador", "definicao_2027", "observacao"]
     colunas_gestao = [c for c in colunas_gestao if c in df_f.columns]
     st.dataframe(df_f[colunas_gestao], use_container_width=True, height=550)
     st.stop()
