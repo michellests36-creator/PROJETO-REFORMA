@@ -467,8 +467,8 @@ if perfil_curto == "Gestão":
 
     st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
     # Só mostra o que foi preenchido no contato
-    colunas_gestao = ["fornecedor", "comprador", "categoria", "status", "recebeu", "data_contato", "canal_contato",
-                      "previsao_retorno", "responsavel_contador", "definicao_2027", "observacao"]
+    colunas_gestao = ["Fornecedor", "Comprador", "Categoria", "Status", "Recebeu", "Data Contato", "Canal Contato",
+                      "Previsao Retorno", "Responsavel Contador", "Definicao 2027", "Observacao"]
     # Filtra só colunas que existem
     colunas_gestao = [c for c in colunas_gestao if c in df_f.columns]
 
