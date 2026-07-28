@@ -254,57 +254,6 @@ if not st.session_state.autenticado:
 def carregar_contatos():
     return pd.read_sql(text("SELECT * FROM contatos"), engine).fillna("")
 
-
-def tela_carregando(nome_perfil):
-    """Tela exibida rapidamente durante a troca de comprador, no mesmo
-    estilo visual da tela de login (cartão escuro + barra de progresso)."""
-    st.markdown(f"""
-    <style>
-    #MainMenu, footer, header {{visibility: hidden;}}
-    .stApp {{ background: #08162E !important; }}
-    .block-container {{ padding-top: 0 !important; max-width: 100% !important; }}
-    @keyframes mbp-loadbar {{
-        0% {{ left: -45%; }}
-        100% {{ left: 100%; }}
-    }}
-    @keyframes mbp-fadein {{
-        from {{ opacity: 0; transform: translateY(6px) scale(0.98); }}
-        to {{ opacity: 1; transform: translateY(0) scale(1); }}
-    }}
-    @keyframes mbp-pulse {{
-        0%, 100% {{ opacity: 0.4; }}
-        50% {{ opacity: 1; }}
-    }}
-    </style>
-    <div style="position:relative; display:flex; align-items:center; justify-content:center; height:78vh; overflow:hidden;">
-        <div style="position:absolute; width:420px; height:420px; border-radius:50%;
-                    background:radial-gradient(circle, rgba(255,192,0,0.10) 0%, rgba(255,192,0,0) 70%);
-                    pointer-events:none;"></div>
-        <div style="position:relative; background:#0F2242; border:1px solid #1E3A5F; border-radius:16px;
-                    padding:36px 40px; width:320px; text-align:center;
-                    box-shadow:0 20px 60px rgba(0,0,0,0.35);
-                    animation: mbp-fadein 0.35s ease-out;">
-            <div style="width:44px; height:44px; border-radius:12px; background:#ffc000; display:flex;
-                        align-items:center; justify-content:center; margin:0 auto 16px;
-                        font-weight:900; font-size:20px; color:#08162E;">M</div>
-            <div style="color:white; font-weight:800; font-size:14px; letter-spacing:0.5px;">GRUPO MBP</div>
-            <div style="color:#8BA3C7; font-size:12px; margin-top:6px; margin-bottom:20px;">
-                Preparando o portal de {nome_perfil}...
-            </div>
-            <div style="background:#132A4E; height:5px; border-radius:3px; overflow:hidden; position:relative;">
-                <div style="position:absolute; top:0; width:45%; height:100%; border-radius:3px;
-                            background:linear-gradient(90deg, rgba(255,192,0,0) 0%, #ffc000 50%, rgba(255,192,0,0) 100%);
-                            animation: mbp-loadbar 0.85s ease-in-out infinite;"></div>
-            </div>
-            <div style="color:#5A7AA8; font-size:10px; margin-top:14px;">
-                <span style="animation: mbp-pulse 1.2s ease-in-out infinite;">●</span>
-                &nbsp;Sincronizando dados do comprador
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-
 perfil_curto = st.session_state.perfil
 active_key = KEY_MAP.get(perfil_curto, "perf_Camila")
 
@@ -312,8 +261,6 @@ active_key = KEY_MAP.get(perfil_curto, "perf_Camila")
 # instante (garante que o cache de dados novos seja usado) e então segue
 # para o painel de verdade em uma nova rodada de execução.
 if st.session_state.trocando_perfil:
-    tela_carregando(perfil_curto)
-    time.sleep(0.45)
     carregar_contatos.clear()
     st.session_state.trocando_perfil = False
     st.rerun()
@@ -418,10 +365,7 @@ with st.sidebar:
 perfil_real = MAP_COMPRADOR[perfil_curto]
 
 # LOADING ATÉ ATUALIZAR
-import time
-with st.spinner("⏳ Carregando dados..."):
-    df_all = carregar_contatos()
-    time.sleep(2.0)  # só pra dar o efeito visual
+df_all = carregar_contatos()
 
 if perfil_curto == "Gestão":
     st.markdown(f"""<div style="font-size:22px; font-weight:800; color:#111827; margin:10px 0;">🏢 Fornecedores • Gestão</div>""", unsafe_allow_html=True)
