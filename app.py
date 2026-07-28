@@ -125,7 +125,7 @@ def seed():
     df = df.rename(columns=rename)
 
     colunas_necessarias = [
-        "COMPRADOR", "FORNECEDOR", "cnpj", "categoria", "contato", "data_contato",
+        "comprador", "fornecedor", "cnpj", "categoria", "contato", "data_contato",
         "canal_contato", "recebeu", "reenvio_necessario", "acompanha_reforma",
         "discutiu_internamente", "falou_contador", "responsavel_contador",
         "definicao_2027", "previsao_retorno", "data_proximo_contato", "status",
