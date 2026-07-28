@@ -383,14 +383,19 @@ if perfil_curto == "Gestão":
     if busca:
         df_f = df_f[df_f["fornecedor"].astype(str).str.upper().str.contains(busca.upper())]
 
-    status_counts = df_f["status"].fillna("Pendente").replace("", "Pendente").value_counts()
-    def get(s): return int(status_counts.get(s, 0))
+
+    # ESCRITA PADRÃO: ["Pendente - Fornecedor Não contatado", "Verde - Confirmado", "Amarelo - Em avaliação", "Laranja - Sem definição", "Vermelho - Não pretende alterar", "Cinza - Não localizado"]
+    def count_status(df, nome_cor):
+        return int(df["status"].astype(str).str.upper().str.contains(nome_cor.upper(), na=False).sum())
 
 
     total = len(df_f)
-    verde, amarelo, laranja, vermelho, cinza, pendente = get("Verde"), get("Amarelo"), get("Laranja"), get(
-        "Vermelho"), get("Cinza"), get("Pendente")
-
+    verde = count_status(df_f, "VERDE")
+    amarelo = count_status(df_f, "AMARELO")
+    laranja = count_status(df_f, "LARANJA")
+    vermelho = count_status(df_f, "VERMELHO")
+    cinza = count_status(df_f, "CINZA")
+    pendente = total - (verde + amarelo + laranja + vermelho + cinza)
     atendidos = total - pendente
     perc = (atendidos / total * 100) if total > 0 else 0
 
@@ -585,7 +590,7 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
 
                 c9, c10 = st.columns(2)
                 with c9:
-                    status = st.selectbox("STATUS OFICIAL", ["Pendente - Fornecedor Não contatado", "Verde -Confirmado", "Amarelo - Em avaliação", "Laranja - Sem definição", "Vermelho - - Não pretende alterar", "Cinza - Não localizado"],
+                    status = st.selectbox("STATUS OFICIAL", ["Pendente - Fornecedor Não contatado", "Verde - Confirmado", "Amarelo - Em avaliação", "Laranja - Sem definição", "Vermelho - Não pretende alterar", "Cinza - Não localizado"],
                                            index=["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"].index(badge) if badge in ["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"] else 0, key=f"stat_{idx}_{row['id']}")
                 with c10:
                     # FIX: lista de opções e lista usada no .index() agora são a mesma
