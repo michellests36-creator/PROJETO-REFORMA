@@ -383,14 +383,18 @@ if perfil_curto == "Gestão":
     if busca:
         df_f = df_f[df_f["fornecedor"].astype(str).str.upper().str.contains(busca.upper())]
 
-    status_counts = df_f["status"].fillna("Pendente").replace("", "Pendente").value_counts()
-    def get(s): return int(status_counts.get(s, 0))
 
+    # ESCRITA PADRÃO: ["Pendente - Fornecedor Não contatado", "Verde - Confirmado", "Amarelo - Em avaliação", "Laranja - Sem definição", "Vermelho - Não pretende alterar", "Cinza - Não localizado"]
+    def count_status(df, nome_cor):
+        return int(df["status"].astype(str).str.upper().str.contains(nome_cor.upper(), na=False).sum())
 
     total = len(df_f)
-    verde, amarelo, laranja, vermelho, cinza, pendente = get("Verde"), get("Amarelo"), get("Laranja"), get(
-        "Vermelho"), get("Cinza"), get("Pendente")
-
+    verde = count_status(df_f, "VERDE")
+    amarelo = count_status(df_f, "AMARELO")
+    laranja = count_status(df_f, "LARANJA")
+    vermelho = count_status(df_f, "VERMELHO")
+    cinza = count_status(df_f, "CINZA")
+    pendente = total - (verde + amarelo + laranja + vermelho + cinza)
     atendidos = total - pendente
     perc = (atendidos / total * 100) if total > 0 else 0
 
