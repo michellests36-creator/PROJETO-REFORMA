@@ -77,6 +77,8 @@ def init_db():
         "responsavel_interno": "TEXT",
         "definicao_preliminar": "TEXT",
         "alerta_critico": "TEXT",
+        "telefone_contato": "TEXT",  # <-- NOVO
+        "email_contato": "TEXT",  # <-- NOVO
     }
     with engine.begin() as conn:
         for col, tipo in novas_colunas.items():
@@ -563,6 +565,16 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                                             index=opcoes_2027.index(row.get("definicao_2027")) if row.get(
                                                 "definicao_2027") in opcoes_2027 else 0, key=f"def_{idx}_{row['id']}")
 
+                c5b, c6b = st.columns(2)
+                with c5b:
+                    telefone_contato = st.text_input("TELEFONE DE CONTATO",
+                                                     value=str(row.get("telefone_contato") or ""),
+                                                     key=f"tel_{idx}_{row['id']}", placeholder="(00) 00000-0000")
+                with c6b:
+                    email_contato = st.text_input("E-MAIL DE CONTATO",
+                                                  value=str(row.get("email_contato") or ""),
+                                                  key=f"email_{idx}_{row['id']}", placeholder="nome@empresa.com")
+
                 c7, c8 = st.columns(2)
                 with c7:
                     # FIX: era row.get("PREVISAO_RETORNO") -> coluna real é "previsao_retorno"
@@ -613,13 +625,14 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                                     data_contato=:dc, canal_contato=:cc, recebeu=:r, reenvio_necessario=:rn,
                                     acompanha_reforma=:ar, discutiu_internamente=:di, falou_contador=:fc,
                                     responsavel_contador=:rc, definicao_2027=:d27, previsao_retorno=:p,
-                                    data_proximo_contato=:dpc, status=:s, proxima_acao=:pa, observacao=:o
+                                    data_proximo_contato=:dpc, status=:s, proxima_acao=:pa, observacao=:o, telefone_contato=:tel, email_contato=:em
                                 WHERE id=:id
                             """), {
                                 "dc": data_contato, "cc": canal_contato, "r": recebeu, "rn": reenvio,
                                 "ar": 1 if chk1 else 0, "di": 1 if chk2 else 0, "fc": 1 if chk3 else 0,
                                 "rc": resp_cont, "d27": def_2027, "p": prev, "dpc": prox_contato,
-                                "s": status, "pa": prox_acao, "o": obs, "id": int(row['id'])
+                                "s": status, "pa": prox_acao, "o": obs,
+                                "tel": telefone_contato, "em": email_contato, "id": int(row['id'])
                             })
                         carregar_contatos.clear()  # invalida o cache para refletir o salvamento imediatamente
                         st.success("✅ SALVO COM SUCESSO!")
