@@ -254,8 +254,31 @@ if not st.session_state.autenticado:
 # comprador), então os dados nunca ficam desatualizados na tela.
 @st.cache_data(ttl=30, show_spinner=False)
 def carregar_contatos():
-    return pd.read_sql(text("SELECT * FROM contatos ORDER BY fornecedor ASC"), engine).fillna("")
+    df = pd.read_sql(text("SELECT * FROM contatos ORDER BY fornecedor ASC"), engine).fillna("")
 
+    # Identifica tudo o que é considerado pendente
+    mask_pendente = (
+            df["status"].str.upper().str.contains("PEND", na=False) |
+            (df["status"] == "") |
+            (df["status"].isna()) |
+            (df["status"] == "None")
+    )
+
+    # Padroniza o texto do status
+    df.loc[mask_pendente, "status"] = "Pendente - Fornecedor Não contatado"
+
+    # Zera os campos de preenchimento e datas para que nunca fiquem preenchidos quando pendente
+    cols_para_limpar = [
+        "recebeu", "data_contato", "canal_contato", "reenvio_necessario",
+        "responsavel_contador", "definicao_2027", "previsao_retorno",
+        "data_proximo_contato", "proxima_acao", "observacao",
+        "telefone_contato", "email_contato"
+    ]
+    for col in cols_para_limpar:
+        if col in df.columns:
+            df.loc[mask_pendente, col] = ""
+
+    return df
 perfil_curto = st.session_state.perfil
 active_key = KEY_MAP.get(perfil_curto, "perf_Camila")
 
@@ -638,24 +661,42 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                 submitted = st.form_submit_button("💾 SALVAR", use_container_width=True)
 
                 if submitted:
-                    try:
-                        with engine.begin() as conn:
-                            conn.execute(text("""
-                                UPDATE contatos SET
-                                    data_contato=:dc, canal_contato=:cc, recebeu=:r, reenvio_necessario=:rn,
-                                    acompanha_reforma=:ar, discutiu_internamente=:di, falou_contador=:fc,
-                                    responsavel_contador=:rc, definicao_2027=:d27, previsao_retorno=:p,
-                                    data_proximo_contato=:dpc, status=:s, proxima_acao=:pa, observacao=:o, telefone_contato=:tel, email_contato=:em
-                                WHERE id=:id
-                            """), {
-                                "dc": data_contato, "cc": canal_contato, "r": recebeu, "rn": reenvio,
-                                "ar": 1 if chk1 else 0, "di": 1 if chk2 else 0, "fc": 1 if chk3 else 0,
-                                "rc": resp_cont, "d27": def_2027, "p": prev, "dpc": prox_contato,
-                                "s": status, "pa": prox_acao, "o": obs,
-                                "tel": telefone_contato, "em": email_contato, "id": int(row['id'])
-                            })
-                        carregar_contatos.clear()  # invalida o cache para refletir o salvamento imediatamente
-                        st.success("✅ SALVO COM SUCESSO!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"❌ ERRO AO SALVAR: {e}")
+                    if salvar:
+                        # Se o status escolhido for pendente, zera todas as variáveis antes de atualizar o banco
+                        if "PENDENTE" in status.upper():
+                            data_contato = ""
+                            canal_contato = ""
+                            recebeu = ""
+                            reenvio = "Não"
+                            chk1, chk2, chk3 = False, False, False
+                            resp_cont = ""
+                            def_2027 = ""
+                            telefone_contato = ""
+                            email_contato = ""
+                            prev = ""
+                            prox_contato = ""
+                            prox_acao = "Nenhuma"
+                            obs = ""
+                            status = "Pendente - Fornecedor Não contatado"
+
+                        try:
+                            with engine.begin() as conn:
+                                conn.execute(text("""
+                                            UPDATE contatos SET
+                                                data_contato=:dc, canal_contato=:cc, recebeu=:r, reenvio_necessario=:rn,
+                                                acompanha_reforma=:ar, discutiu_internamente=:di, falou_contador=:fc,
+                                                responsavel_contador=:rc, definicao_2027=:d27, previsao_retorno=:p,
+                                                data_proximo_contato=:dpc, status=:s, proxima_acao=:pa, observacao=:o, telefone_contato=:tel, email_contato=:em
+                                            WHERE id=:id
+                                        """), {
+                                    "dc": data_contato, "cc": canal_contato, "r": recebeu, "rn": reenvio,
+                                    "ar": 1 if chk1 else 0, "di": 1 if chk2 else 0, "fc": 1 if chk3 else 0,
+                                    "rc": resp_cont, "d27": def_2027, "p": prev, "dpc": prox_contato,
+                                    "s": status, "pa": prox_acao, "o": obs,
+                                    "tel": telefone_contato, "em": email_contato, "id": int(row['id'])
+                                })
+                            carregar_contatos.clear()  # invalida o cache para refletir o salvamento imediatamente
+                            st.success("✅ SALVO COM SUCESSO E DADOS LIMPOS!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ ERRO AO SALVAR: {e}")
