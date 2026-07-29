@@ -489,9 +489,16 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
     badge = row.get("status") or "Pendente"
     recebeu_val = row.get("recebeu") or "Pendente"
 
-    bc = "Pendente" if badge in ["", "Pendente"] else (
-        "Verde" if "VERDE" in badge.upper() else "Amarelo" if "AMARELO" in badge.upper() else "Vermelho" if "VERMELHO" in badge.upper() else "Laranja" if "LARANJA" in badge.upper() else "Cinza")
-    icon = "⚪" if badge in ["", "Pendente"] else "🟢" if bc == "Verde" else "🔴" if bc == "Vermelho" else "🟡" if bc == "Amarelo" else "🟠"
+    bc = "Pendente" if ("PENDENTE" in badge.upper() or badge in ["", "None"]) else (
+        "Verde" if "VERDE" in badge.upper() else
+        "Amarelo" if "AMARELO" in badge.upper() else
+        "Vermelho" if "VERMELHO" in badge.upper() else
+        "Laranja" if "LARANJA" in badge.upper() else "Cinza")
+
+    icon = "⚪" if "PENDENTE" in badge.upper() or badge in ["", "None"] else (
+        "🟢" if bc == "Verde" else
+        "🔴" if bc == "Vermelho" else
+        "🟡" if bc == "Amarelo" else "🟠")
 
     titulo = f"{icon} {row.get('fornecedor')}"
 
