@@ -454,7 +454,12 @@ if df.empty:
     df = df_all[df_all["comprador"].str.contains(perfil_curto.upper(), na=False)]
 
 total = len(df)
-cont = len(df[~df["status"].isin(["", "Pendente", "None"])])
+# Conta como atendido apenas o que NÃO contém a palavra PENDENTE (e não está vazio)
+cont = len(df[
+    ~df["status"].str.upper().str.contains("PENDENTE", na=False) &
+    (df["status"] != "") &
+    (df["status"].notna())
+])
 perc = cont / total * 100 if total else 0
 st.markdown(
     f"""<div style="display:flex; justify-content:space-between; margin:10px 0 16px 0;"><div><div style="font-size:20px; font-weight:800; color:#111827;">🏢 Fornecedores • {perfil_curto}</div><div style="font-size:13px; color:#6B7280;">{cont} atendidos de {total} • {perc:.1f}% concluído</div></div></div>""",
@@ -466,7 +471,7 @@ with f_busca1:
                                      key=f"busca_{perfil_curto}")
 with f_busca2:
     filtro_status_c = st.selectbox("Status:",
-                                    ["Todos", "Pendente", "Vermelho", "Amarelo", "Verde", "Laranja", "Cinza"],
+                                    ["Todos", "Pendente - Fornecedor Não contatado", "Vermelho", "Amarelo", "Verde", "Laranja", "Cinza"],
                                     key=f"fstat_{perfil_curto}")
 
 df_filtrado = df.copy()
@@ -475,9 +480,16 @@ if busca_comprador:
     df_filtrado = df_filtrado[df_filtrado["fornecedor"].str.lower().str.contains(q, na=False) | df_filtrado[
         "categoria"].str.lower().str.contains(q, na=False)]
 if filtro_status_c != "Todos":
-    df_filtrado = df_filtrado[
-        df_filtrado["status"].str.contains(filtro_status_c, case=False, na=False)] if filtro_status_c != "Pendente" else \
-        df_filtrado[df_filtrado["status"].isin(["", "Pendente", "None"])]
+    if "PENDENTE" in filtro_status_c.upper():
+        df_filtrado = df_filtrado[
+            df_filtrado["status"].str.upper().str.contains("PENDENTE", na=False) |
+            (df_filtrado["status"] == "") |
+            (df_filtrado["status"].isna())
+        ]
+    else:
+        df_filtrado = df_filtrado[
+            df_filtrado["status"].str.contains(filtro_status_c, case=False, na=False)
+        ]
 
 # FIX: lista única usada tanto nas opções do selectbox quanto no cálculo do
 # índice inicial, para "PRÓXIMA AÇÃO" não abrir com o valor deslocado.
