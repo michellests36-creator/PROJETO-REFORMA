@@ -83,11 +83,11 @@ def init_db():
     with engine.begin() as conn:
         for col, tipo in novas_colunas.items():
             try:
-                conn.execute(text(f"ALTER TABLE contatos ADD COLUMN {col} {tipo}"))
+                # Cada coluna em sua própria transação + IF NOT EXISTS (funciona no Supabase)
+                with engine.begin() as conn:
+                    conn.execute(text(f"ALTER TABLE contatos ADD COLUMN IF NOT EXISTS {col} {tipo}"))
             except Exception:
-                # Esperado: a coluna já existe a partir da 2ª execução em diante.
                 pass
-
 
 def seed():
     with engine.connect() as conn:
