@@ -254,7 +254,7 @@ if not st.session_state.autenticado:
 # comprador), então os dados nunca ficam desatualizados na tela.
 @st.cache_data(ttl=30, show_spinner=False)
 def carregar_contatos():
-    return pd.read_sql(text("SELECT * FROM contatos"), engine).fillna("")
+    return pd.read_sql(text("SELECT * FROM contatos ORDER BY fornecedor ASC"), engine).fillna("")
 
 perfil_curto = st.session_state.perfil
 active_key = KEY_MAP.get(perfil_curto, "perf_Camila")
