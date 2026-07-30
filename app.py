@@ -661,6 +661,8 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                 submitted = st.form_submit_button("💾 SALVAR", use_container_width=True)
 
                 if submitted:
+                    # ... lógica de salvamento direto, já que o próprio 'submitted'
+                    # indica que o formulário foi enviado ...
                     if salvar:
                         # Se o status escolhido for pendente, zera todas as variáveis antes de atualizar o banco
                         if "PENDENTE" in status.upper():
