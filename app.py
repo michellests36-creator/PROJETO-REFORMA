@@ -533,7 +533,8 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
     icon = "⚪" if "PENDENTE" in badge.upper() or badge in ["", "None"] else (
         "🟢" if bc == "Verde" else
         "🔴" if bc == "Vermelho" else
-        "🟡" if bc == "Amarelo" else "🟠")
+        "🟡" if bc == "Amarelo" else
+        "🟠" if bc == "Laranja" else "⚪")
 
     titulo = f"{icon} {row.get('fornecedor')}"
 
