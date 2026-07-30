@@ -661,44 +661,41 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                 submitted = st.form_submit_button("💾 SALVAR", use_container_width=True)
 
                 if submitted:
-                    # ... lógica de salvamento direto, já que o próprio 'submitted'
-                    # indica que o formulário foi enviado ...
-                    if salvar:
-                        # Se o status escolhido for pendente, zera todas as variáveis antes de atualizar o banco
-                        if "PENDENTE" in status.upper():
-                            data_contato = ""
-                            canal_contato = ""
-                            recebeu = ""
-                            reenvio = "Não"
-                            chk1, chk2, chk3 = False, False, False
-                            resp_cont = ""
-                            def_2027 = ""
-                            telefone_contato = ""
-                            email_contato = ""
-                            prev = ""
-                            prox_contato = ""
-                            prox_acao = "Nenhuma"
-                            obs = ""
-                            status = "Pendente - Fornecedor Não contatado"
+                    # Se o status escolhido for pendente, zera todas as variáveis antes de atualizar o banco
+                    if "PENDENTE" in status.upper():
+                        data_contato = ""
+                        canal_contato = ""
+                        recebeu = ""
+                        reenvio = "Não"
+                        chk1, chk2, chk3 = False, False, False
+                        resp_cont = ""
+                        def_2027 = ""
+                        telefone_contato = ""
+                        email_contato = ""
+                        prev = ""
+                        prox_contato = ""
+                        prox_acao = "Nenhuma"
+                        obs = ""
+                        status = "Pendente - Fornecedor Não contatado"
 
-                        try:
-                            with engine.begin() as conn:
-                                conn.execute(text("""
-                                            UPDATE contatos SET
-                                                data_contato=:dc, canal_contato=:cc, recebeu=:r, reenvio_necessario=:rn,
-                                                acompanha_reforma=:ar, discutiu_internamente=:di, falou_contador=:fc,
-                                                responsavel_contador=:rc, definicao_2027=:d27, previsao_retorno=:p,
-                                                data_proximo_contato=:dpc, status=:s, proxima_acao=:pa, observacao=:o, telefone_contato=:tel, email_contato=:em
-                                            WHERE id=:id
-                                        """), {
-                                    "dc": data_contato, "cc": canal_contato, "r": recebeu, "rn": reenvio,
-                                    "ar": 1 if chk1 else 0, "di": 1 if chk2 else 0, "fc": 1 if chk3 else 0,
-                                    "rc": resp_cont, "d27": def_2027, "p": prev, "dpc": prox_contato,
-                                    "s": status, "pa": prox_acao, "o": obs,
-                                    "tel": telefone_contato, "em": email_contato, "id": int(row['id'])
-                                })
-                            carregar_contatos.clear()  # invalida o cache para refletir o salvamento imediatamente
-                            st.success("✅ SALVO COM SUCESSO E DADOS LIMPOS!")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"❌ ERRO AO SALVAR: {e}")
+                    try:
+                        with engine.begin() as conn:
+                            conn.execute(text("""
+                                        UPDATE contatos SET
+                                            data_contato=:dc, canal_contato=:cc, recebeu=:r, reenvio_necessario=:rn,
+                                            acompanha_reforma=:ar, discutiu_internamente=:di, falou_contador=:fc,
+                                            responsavel_contador=:rc, definicao_2027=:d27, previsao_retorno=:p,
+                                            data_proximo_contato=:dpc, status=:s, proxima_acao=:pa, observacao=:o, telefone_contato=:tel, email_contato=:em
+                                        WHERE id=:id
+                                    """), {
+                                "dc": data_contato, "cc": canal_contato, "r": recebeu, "rn": reenvio,
+                                "ar": 1 if chk1 else 0, "di": 1 if chk2 else 0, "fc": 1 if chk3 else 0,
+                                "rc": resp_cont, "d27": def_2027, "p": prev, "dpc": prox_contato,
+                                "s": status, "pa": prox_acao, "o": obs,
+                                "tel": telefone_contato, "em": email_contato, "id": int(row['id'])
+                            })
+                        carregar_contatos.clear()  # invalida o cache para refletir o salvamento imediatamente
+                        st.success("✅ SALVO COM SUCESSO E DADOS LIMPOS!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ ERRO AO SALVAR: {e}")
