@@ -468,6 +468,8 @@ if perfil_curto == "Gestão":
         df_f[df_f[coluna_alvo] == "Migrar para Lucro Presumido"]) if coluna_alvo in df_f.columns else 0
     lucro_real = len(df_f[df_f[coluna_alvo] == "Migrar para Lucro Real"]) if coluna_alvo in df_f.columns else 0
 
+    # "Sem Definição" passa a ser diretamente a soma do Amarelo com o Cinza
+    sem_definicao = amarelo + cinza
     opcoes_com_cartao = [
         "Manter Simples Nacional",
         "Migrar para Simples Híbrido",
