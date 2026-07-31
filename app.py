@@ -458,7 +458,7 @@ if perfil_curto == "Gestão":
     with e:
         st.markdown(f'<div class="card c-pendente">{pendente}<br><small>PENDENTE</small></div>', unsafe_allow_html=True)
 
-        # === NOVOS CARTÕES: DEFINIÇÃO PRELIMINAR 2027 (FORA DAS COLUNAS ACIMA) ===
+        # === NOVOS CARTÕES: DEFINIÇÃO PRELIMINAR 2027 ===
         coluna_alvo = 'definicao_2027'
 
         manter_simples = len(df_f[df_f[coluna_alvo] == "Manter Simples Nacional"]) if coluna_alvo in df_f.columns else 0
@@ -468,7 +468,7 @@ if perfil_curto == "Gestão":
             df_f[df_f[coluna_alvo] == "Migrar para Lucro Presumido"]) if coluna_alvo in df_f.columns else 0
         lucro_real = len(df_f[df_f[coluna_alvo] == "Migrar para Lucro Real"]) if coluna_alvo in df_f.columns else 0
 
-        # "Sem Definição" passa a ser diretamente a soma do Amarelo com o Cinza
+        # Aplicação da mesma lógica de composição (soma direta dos status amarelo e cinza)
         sem_definicao = amarelo + cinza
 
     opcoes_com_cartao = [
