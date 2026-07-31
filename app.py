@@ -643,8 +643,8 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
 
                 c9, c10 = st.columns(2)
                 with c9:
-                    status = st.selectbox("STATUS OFICIAL", ["Pendente - Fornecedor Não contatado", "Verde - Confirmado", "Amarelo - Em avaliação", "Laranja - Sem definição", "Vermelho - Não pretende alterar", "Cinza - Não localizado"],
-                                           index=["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"].index(badge) if badge in ["Pendente", "Verde", "Amarelo", "Laranja", "Vermelho", "Cinza"] else 0, key=f"stat_{idx}_{row['id']}")
+                    status = st.selectbox("STATUS OFICIAL", ["Pendente - Fornecedor Não contatado", "Verde - Confirmado", "Amarelo - Em avaliação", "Cinza - Não localizado"],
+                                           index=["Pendente", "Verde", "Amarelo", "Cinza"].index(badge) if badge in ["Pendente", "Verde", "Amarelo", "Cinza"] else 0, key=f"stat_{idx}_{row['id']}")
                 with c10:
                     # FIX: lista de opções e lista usada no .index() agora são a mesma
                     # (antes o .index() usava uma lista sem "Nenhuma" e deslocava a seleção).
