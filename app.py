@@ -458,6 +458,65 @@ if perfil_curto == "Gestão":
     with e:
         st.markdown(f'<div class="card c-pendente">{pendente}<br><small>PENDENTE</small></div>', unsafe_allow_html=True)
 
+        # === NOVOS CARTÕES: DEFINIÇÃO PRELIMINAR 2027 ===
+        coluna_alvo = 'definicao_2027'
+
+        manter_simples = len(df_f[df_f[coluna_alvo] == "Manter Simples Nacional"]) if coluna_alvo in df_f.columns else 0
+        simples_hibrido = len(
+            df_f[df_f[coluna_alvo] == "Migrar para Simples Híbrido"]) if coluna_alvo in df_f.columns else 0
+        lucro_presumido = len(
+            df_f[df_f[coluna_alvo] == "Migrar para Lucro Presumido"]) if coluna_alvo in df_f.columns else 0
+        lucro_real = len(df_f[df_f[coluna_alvo] == "Migrar para Lucro Real"]) if coluna_alvo in df_f.columns else 0
+
+        opcoes_com_cartao = [
+            "Manter Simples Nacional",
+            "Migrar para Simples Híbrido",
+            "Migrar para Lucro Presumido",
+            "Migrar para Lucro Real"
+        ]
+
+        if coluna_alvo in df_f.columns:
+            sem_definicao = len(df_f[~df_f[coluna_alvo].isin(opcoes_com_cartao) | df_f[coluna_alvo].isna()])
+        else:
+            sem_definicao = len(df_f)
+
+        st.markdown("""
+             <style>
+            .card-def {border-radius:10px; padding:12px; text-align:center; color:white; font-weight:800; margin-top: 10px; margin-bottom: 10px;}
+            .c-manter{background:#16A34A}
+            .c-hibrido{background:#CA8A04}
+            .c-presumido{background:#7C3AED}
+            .c-real{background:#2563EB}
+            .c-semdef{background:#D97706}
+             </style>
+             """, unsafe_allow_html=True)
+
+        c1, c2, c3, c4, c5 = st.columns(5)
+        with c1:
+            st.markdown(f'<div class="card-def c-manter">{manter_simples}<br><small>Manter Simples</small></div>',
+                        unsafe_allow_html=True)
+        with c2:
+            st.markdown(f'<div class="card-def c-hibrido">{simples_hibrido}<br><small>Migra Simples H.</small></div>',
+                        unsafe_allow_html=True)
+        with c3:
+            st.markdown(
+                f'<div class="card-def c-presumido">{lucro_presumido}<br><small>Migrar Lucro Pres.</small></div>',
+                unsafe_allow_html=True)
+        with c4:
+            st.markdown(f'<div class="card-def c-real">{lucro_real}<br><small>Migrar Lucro Real</small></div>',
+                        unsafe_allow_html=True)
+        with c5:
+            st.markdown(f'<div class="card-def c-semdef">{sem_definicao}<br><small>Sem Definição</small></div>',
+                        unsafe_allow_html=True)
+
+        st.markdown("<div style='margin-top:15px'></div>", unsafe_allow_html=True)
+        colunas_gestao = ["fornecedor", "comprador", "categoria", "status", "recebeu", "data_contato", "canal_contato",
+                          "previsao_retorno", "responsavel_contador", "telefone_contato", "email_contato",
+                          "definicao_2027", "observacao"]
+        colunas_gestao = [c for c in colunas_gestao if c in df_f.columns]
+        st.dataframe(df_f[colunas_gestao], use_container_width=True, height=550)
+        st.stop()
+
     st.markdown("<div style='margin-top:15px'></div>", unsafe_allow_html=True)
     colunas_gestao = ["fornecedor", "comprador", "categoria", "status", "recebeu", "data_contato", "canal_contato",
                       "previsao_retorno", "responsavel_contador", "telefone_contato", "email_contato",
