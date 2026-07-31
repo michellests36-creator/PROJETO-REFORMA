@@ -458,7 +458,7 @@ if perfil_curto == "Gestão":
     with e:
         st.markdown(f'<div class="card c-pendente">{pendente}<br><small>PENDENTE</small></div>', unsafe_allow_html=True)
 
-        # === NOVOS CARTÕES: DEFINIÇÃO PRELIMINAR 2027 ===
+        # === NOVOS CARTÕES: DEFINIÇÃO PRELIMINAR 2027 (LADO A LADO) ===
         coluna_alvo = 'definicao_2027'
 
         manter_simples = len(df_f[df_f[coluna_alvo] == "Manter Simples Nacional"]) if coluna_alvo in df_f.columns else 0
@@ -481,33 +481,36 @@ if perfil_curto == "Gestão":
             sem_definicao = len(df_f)
 
         st.markdown("""
-             <style>
-            .card-def {border-radius:10px; padding:12px; text-align:center; color:white; font-weight:800; margin-top: 10px; margin-bottom: 10px;}
-            .c-manter{background:#16A34A}
-            .c-hibrido{background:#CA8A04}
-            .c-presumido{background:#7C3AED}
-            .c-real{background:#2563EB}
-            .c-semdef{background:#D97706}
-             </style>
-             """, unsafe_allow_html=True)
+                 <style>
+                .card-def {border-radius:10px; padding:12px; text-align:center; color:white; font-weight:800; margin-top: 10px;}
+                .c-manter{background:#16A34A}
+                .c-hibrido{background:#CA8A04}
+                .c-presumido{background:#7C3AED}
+                .c-real{background:#2563EB}
+                .c-semdef{background:#D97706}
+                 </style>
+                 """, unsafe_allow_html=True)
 
-        c1, c2, c3, c4, c5 = st.columns(5)
-        with c1:
+        # Nova linha de colunas separada para garantir o preenchimento total da largura
+        col1, col2, col3, col4, col5 = st.columns(5)
+        with col1:
             st.markdown(f'<div class="card-def c-manter">{manter_simples}<br><small>Manter Simples</small></div>',
                         unsafe_allow_html=True)
-        with c2:
+        with col2:
             st.markdown(f'<div class="card-def c-hibrido">{simples_hibrido}<br><small>Migra Simples H.</small></div>',
                         unsafe_allow_html=True)
-        with c3:
+        with col3:
             st.markdown(
                 f'<div class="card-def c-presumido">{lucro_presumido}<br><small>Migrar Lucro Pres.</small></div>',
                 unsafe_allow_html=True)
-        with c4:
+        with col4:
             st.markdown(f'<div class="card-def c-real">{lucro_real}<br><small>Migrar Lucro Real</small></div>',
                         unsafe_allow_html=True)
-        with c5:
+        with col5:
             st.markdown(f'<div class="card-def c-semdef">{sem_definicao}<br><small>Sem Definição</small></div>',
                         unsafe_allow_html=True)
+
+        st.markdown("<div style='margin-top:15px'></div>", unsafe_allow_html=True)
 
         st.markdown("<div style='margin-top:15px'></div>", unsafe_allow_html=True)
         colunas_gestao = ["fornecedor", "comprador", "categoria", "status", "recebeu", "data_contato", "canal_contato",
