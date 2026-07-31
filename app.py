@@ -407,17 +407,15 @@ if perfil_curto == "Gestão":
         df_f = df_f[df_f["fornecedor"].astype(str).str.upper().str.contains(busca.upper())]
 
 
-    # ESCRITA PADRÃO: ["Pendente - Fornecedor Não contatado", "Verde - Confirmado", "Amarelo - Em avaliação", "Laranja - Sem definição", "Vermelho - Não pretende alterar", "Cinza - Não localizado"]
+    # ESCRITA PADRÃO: ["Pendente - Fornecedor Não contatado", "Verde - Confirmado", "Amarelo - Em avaliação", "Cinza - Não localizado"]
     def count_status(df, nome_cor):
         return int(df["status"].astype(str).str.upper().str.contains(nome_cor.upper(), na=False).sum())
 
     total = len(df_f)
     verde = count_status(df_f, "VERDE")
     amarelo = count_status(df_f, "AMARELO")
-    laranja = count_status(df_f, "LARANJA")
-    vermelho = count_status(df_f, "VERMELHO")
     cinza = count_status(df_f, "CINZA")
-    pendente = total - (verde + amarelo + laranja + vermelho + cinza)
+    pendente = total - (verde + amarelo + cinza)
     atendidos = total - pendente
     perc = (atendidos / total * 100) if total > 0 else 0
 
@@ -438,14 +436,17 @@ if perfil_curto == "Gestão":
 
     # === CARTÕES COLORIDOS ===
     st.markdown("""
-     <style>
-    .card {border-radius:10px; padding:12px; text-align:center; color:white; font-weight:800;}
-    .c-verde{background:#16A34A}.c-amarelo{background:#CA8A04}.c-laranja{background:#EA580C}
-    .c-vermelho{background:#DC2626}.c-cinza{background:#6B7280}.c-pendente{background:#111827}.c-total{background:#E5E7EB; color:#111827; border:1px solid #D1D5DB}
-     </style>
-     """, unsafe_allow_html=True)
+         <style>
+        .card {border-radius:10px; padding:12px; text-align:center; color:white; font-weight:800;}
+        .c-verde{background:#16A34A}
+        .c-amarelo{background:#CA8A04}
+        .c-cinza{background:#6B7280}
+        .c-pendente{background:#111827}
+        .c-total{background:#E5E7EB; color:#111827; border:1px solid #D1D5DB}
+         </style>
+         """, unsafe_allow_html=True)
 
-    a, b, c, d, e, f, g = st.columns(7)
+    a, b, c, d, e = st.columns(5)
     with a:
         st.markdown(f'<div class="card c-total">{total}<br><small>TOTAL</small></div>', unsafe_allow_html=True)
     with b:
@@ -453,12 +454,8 @@ if perfil_curto == "Gestão":
     with c:
         st.markdown(f'<div class="card c-amarelo">{amarelo}<br><small>AMARELO</small></div>', unsafe_allow_html=True)
     with d:
-        st.markdown(f'<div class="card c-laranja">{laranja}<br><small>LARANJA</small></div>', unsafe_allow_html=True)
-    with e:
-        st.markdown(f'<div class="card c-vermelho">{vermelho}<br><small>VERMELHO</small></div>', unsafe_allow_html=True)
-    with f:
         st.markdown(f'<div class="card c-cinza">{cinza}<br><small>CINZA</small></div>', unsafe_allow_html=True)
-    with g:
+    with e:
         st.markdown(f'<div class="card c-pendente">{pendente}<br><small>PENDENTE</small></div>', unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top:15px'></div>", unsafe_allow_html=True)
@@ -492,7 +489,7 @@ with f_busca1:
                                      key=f"busca_{perfil_curto}")
 with f_busca2:
     filtro_status_c = st.selectbox("Status:",
-                                    ["Todos", "Pendente - Fornecedor Não contatado", "Vermelho", "Amarelo", "Verde", "Laranja", "Cinza"],
+                                    ["Todos", "Pendente - Fornecedor Não contatado", "Verde - Confirmado", "Amarelo - Em avaliação", "Cinza - Não localizado"],
                                     key=f"fstat_{perfil_curto}")
 
 df_filtrado = df.copy()
@@ -524,15 +521,12 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
 
     bc = "Pendente" if ("PENDENTE" in badge.upper() or badge in ["", "None"]) else (
         "Verde" if "VERDE" in badge.upper() else
-        "Amarelo" if "AMARELO" in badge.upper() else
-        "Vermelho" if "VERMELHO" in badge.upper() else
-        "Laranja" if "LARANJA" in badge.upper() else "Cinza")
+        "Amarelo" if "AMARELO" in badge.upper() else "Cinza")
 
     icon = "⚪" if "PENDENTE" in badge.upper() or badge in ["", "None"] else (
         "🟢" if bc == "Verde" else
-        "🔴" if bc == "Vermelho" else
         "🟡" if bc == "Amarelo" else
-        "🟠" if bc == "Laranja" else "⚪")
+        "⚫" if bc == "Cinza" else "⚪")
 
     titulo = f"{icon} {row.get('fornecedor')}"
 
