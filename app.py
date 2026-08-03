@@ -438,26 +438,24 @@ if perfil_curto == "Gestão":
     st.markdown("""
          <style>
         .card {border-radius:10px; padding:12px; text-align:center; color:white; font-weight:800;}
-        .c-verde{background:#16A34A}
-        .c-amarelo{background:#CA8A04}
-        .c-cinza{background:#6B7280}
         .c-pendente{background:#111827}
         .c-total{background:#E5E7EB; color:#111827; border:1px solid #D1D5DB}
          </style>
          """, unsafe_allow_html=True)
 
-    a, b, c, d, e = st.columns(5)
-    with a:
-        st.markdown(f'<div class="card c-total">{total}<br><small>TOTAL</small></div>', unsafe_allow_html=True)
-    with b:
-        st.markdown(f'<div class="card c-verde">{verde}<br><small>VERDE</small></div>', unsafe_allow_html=True)
-    with c:
-        st.markdown(f'<div class="card c-amarelo">{amarelo}<br><small>AMARELO</small></div>', unsafe_allow_html=True)
-    with d:
-        st.markdown(f'<div class="card c-cinza">{cinza}<br><small>CINZA</small></div>', unsafe_allow_html=True)
-    with e:
-        st.markdown(f'<div class="card c-pendente">{pendente}<br><small>PENDENTE</small></div>', unsafe_allow_html=True)
+    a, b = st.columns(2)
 
+    with a:
+        st.markdown(
+            f'<div class="card c-total">{total}<br><small>TOTAL</small></div>',
+            unsafe_allow_html=True
+        )
+
+    with b:
+        st.markdown(
+            f'<div class="card c-pendente">{pendente}<br><small>PENDENTE</small></div>',
+            unsafe_allow_html=True
+        )
         # === NOVOS CARTÕES: DEFINIÇÃO PRELIMINAR 2027 ===
         coluna_alvo = 'definicao_2027'
 
