@@ -598,7 +598,7 @@ if filtro_status_c != "Todos":
 
 # FIX: lista única usada tanto nas opções do selectbox quanto no cálculo do
 # índice inicial, para "PRÓXIMA AÇÃO" não abrir com o valor deslocado.
-OPCOES_PROXIMA_ACAO = ["Nenhuma", "Aguardar retorno", "Reenviar e-mail", "Novo contato telefônico ", "Finalizar tratativa" ]
+OPCOES_PROXIMA_ACAO = ["Nenhuma", "Aguardar retorno", "Reenviar e-mail", "Novo contato telefônico ", "Reunião com o Juridico", "Finalizar tratativa" ]
 
 col_left, col_right = st.columns(2)
 for idx, (i, row) in enumerate(df_filtrado.iterrows()):
