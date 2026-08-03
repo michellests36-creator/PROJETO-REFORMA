@@ -655,6 +655,11 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                 chk1 = st.checkbox("Já acompanha Reforma?", value=bool(row.get("acompanha_reforma", 0)), key=f"chk1_{idx}_{row['id']}")
                 chk2 = st.checkbox("Já discutiu internamente?", value=bool(row.get("discutiu_internamente", 0)), key=f"chk2_{idx}_{row['id']}")
                 chk3 = st.checkbox("Já falou c/ contador?", value=bool(row.get("falou_contador", 0)), key=f"chk3_{idx}_{row['id']}")
+                chk4 = st.checkbox(
+                    "Fornecedor Crítico?",
+                    value=bool(row.get("fornecedor_critico", 0)),
+                    key=f"chk4_{idx}_{row['id']}"
+                )
 
                 c5, c6 = st.columns(2)
                 with c5:
@@ -747,16 +752,16 @@ for idx, (i, row) in enumerate(df_filtrado.iterrows()):
                     try:
                         with engine.begin() as conn:
                             conn.execute(text("""
-                                        UPDATE contatos SET
+                                         UPDATE contatos SET
                                             data_contato=:dc, canal_contato=:cc, recebeu=:r, reenvio_necessario=:rn,
-                                            acompanha_reforma=:ar, discutiu_internamente=:di, falou_contador=:fc,
+                                            acompanha_reforma=:ar, discutiu_internamente=:di, falou_contador=:fc, fornecedor_critico=:fcrit,
                                             responsavel_contador=:rc, definicao_2027=:d27, previsao_retorno=:p,
                                             data_proximo_contato=:dpc, status=:s, proxima_acao=:pa, observacao=:o, telefone_contato=:tel, email_contato=:em
                                         WHERE id=:id
                                     """), {
                                 "dc": data_contato, "cc": canal_contato, "r": recebeu, "rn": reenvio,
                                 "ar": 1 if chk1 else 0, "di": 1 if chk2 else 0, "fc": 1 if chk3 else 0,
-                                "rc": resp_cont, "d27": def_2027, "p": prev, "dpc": prox_contato,
+                                "rc": resp_cont, "d27": def_2027, "p": prev, "dpc": prox_contato,  "fcrit": 1 if chk4 else 0,
                                 "s": status, "pa": prox_acao, "o": obs,
                                 "tel": telefone_contato, "em": email_contato, "id": int(row['id'])
                             })
