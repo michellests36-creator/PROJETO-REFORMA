@@ -481,6 +481,14 @@ if perfil_curto == "Gestão":
         # Não Localizado = Cinza
         nao_localizado = cinza
 
+        # Percentuais
+        perc_manter = (manter_simples / total * 100) if total else 0
+        perc_hibrido = (simples_hibrido / total * 100) if total else 0
+        perc_presumido = (lucro_presumido / total * 100) if total else 0
+        perc_real = (lucro_real / total * 100) if total else 0
+        perc_semdef = (sem_definicao / total * 100) if total else 0
+        perc_naolocalizado = (nao_localizado / total * 100) if total else 0
+
     st.markdown("""
              <style>
             .card-def {
@@ -511,25 +519,72 @@ if perfil_curto == "Gestão":
              """, unsafe_allow_html=True)
 
     col1, col2, col3, col4, col5, col6 = st.columns(6)
+
     with col1:
-        st.markdown(f'<div class="card-def c-manter">{manter_simples}<small>Manter Simples</small></div>',
-                    unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="card-def c-manter">
+            {manter_simples}
+            <small>Manter Simples</small>
+            <small style="font-size:12px;opacity:0.85;">
+                {perc_manter:.1f}% do total
+            </small>
+        </div>
+        """, unsafe_allow_html=True)
+
     with col2:
-        st.markdown(f'<div class="card-def c-hibrido">{simples_hibrido}<small>Migrar Simples H.</small></div>',
-                    unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="card-def c-hibrido">
+            {simples_hibrido}
+            <small>Migrar Simples H.</small>
+            <small style="font-size:12px;opacity:0.85;">
+                {perc_hibrido:.1f}% do total
+            </small>
+        </div>
+        """, unsafe_allow_html=True)
+
     with col3:
-        st.markdown(f'<div class="card-def c-presumido">{lucro_presumido}<small>Lucro Presumido</small></div>',
-                    unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="card-def c-presumido">
+            {lucro_presumido}
+            <small>Lucro Presumido</small>
+            <small style="font-size:12px;opacity:0.85;">
+                {perc_presumido:.1f}% do total
+            </small>
+        </div>
+        """, unsafe_allow_html=True)
+
     with col4:
-        st.markdown(f'<div class="card-def c-real">{lucro_real}<small>Lucro Real</small></div>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="card-def c-real">
+            {lucro_real}
+            <small>Lucro Real</small>
+            <small style="font-size:12px;opacity:0.85;">
+                {perc_real:.1f}% do total
+            </small>
+        </div>
+        """, unsafe_allow_html=True)
+
     with col5:
-        st.markdown(f'<div class="card-def c-semdef">{sem_definicao}<small>Sem Definição</small></div>',
-                    unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="card-def c-semdef">
+            {sem_definicao}
+            <small>Aguardando Definição</small>
+            <small style="font-size:12px;opacity:0.85;">
+                {perc_semdef:.1f}% do total
+            </small>
+        </div>
+        """, unsafe_allow_html=True)
+
     with col6:
-        st.markdown(
-            f'<div class="card-def c-naolocalizado">{nao_localizado}<small>Não Localizado</small></div>',
-            unsafe_allow_html=True
-        )
+        st.markdown(f"""
+        <div class="card-def c-naolocalizado">
+            {nao_localizado}
+            <small>Não Localizado</small>
+            <small style="font-size:12px;opacity:0.85;">
+                {perc_naolocalizado:.1f}% do total
+            </small>
+        </div>
+        """, unsafe_allow_html=True)
 
     # === TABELA FINAL DE GESTÃO ===
     st.markdown("<div style='margin-top:15px'></div>", unsafe_allow_html=True)
