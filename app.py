@@ -533,9 +533,23 @@ if perfil_curto == "Gestão":
 
     # === TABELA FINAL DE GESTÃO ===
     st.markdown("<div style='margin-top:15px'></div>", unsafe_allow_html=True)
-    colunas_gestao = ["fornecedor", "comprador", "categoria", "status", "recebeu", "data_contato", "canal_contato",
-                      "previsao_retorno", "responsavel_contador", "telefone_contato", "email_contato",
-                      "definicao_2027", "observacao"]
+    colunas_gestao = ["fornecedor",
+    "comprador",
+    "categoria",
+    "status",
+    "recebeu",
+    "acompanha_reforma",
+    "discutiu_internamente",
+    "falou_contador",
+    "fornecedor_critico",
+    "data_contato",
+    "canal_contato",
+    "previsao_retorno",
+    "responsavel_contador",
+    "telefone_contato",
+    "email_contato",
+    "definicao_2027",
+    "observacao"]
     colunas_gestao = [c for c in colunas_gestao if c in df_f.columns]
     st.dataframe(df_f[colunas_gestao], use_container_width=True, height=550)
     st.stop()
