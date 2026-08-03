@@ -477,8 +477,11 @@ if perfil_curto == "Gestão":
             df_f[df_f[coluna_alvo] == "Migrar para Lucro Real"]
         ) if coluna_alvo in df_f.columns else 0
 
-        # Sem Definição = Amarelo + Cinza
-        sem_definicao = amarelo + cinza
+        # Aguardando Definição = Amarelo
+        sem_definicao = amarelo
+
+        # Não Localizado = Cinza
+        nao_localizado = cinza
 
     st.markdown("""
              <style>
@@ -505,10 +508,11 @@ if perfil_curto == "Gestão":
             .c-presumido{background:#7C3AED}
             .c-real{background:#2563EB}
             .c-semdef{background:#D97706}
+            .c-naolocalizado {background:#6B7280}
              </style>
              """, unsafe_allow_html=True)
 
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
     with col1:
         st.markdown(f'<div class="card-def c-manter">{manter_simples}<small>Manter Simples</small></div>',
                     unsafe_allow_html=True)
@@ -523,6 +527,11 @@ if perfil_curto == "Gestão":
     with col5:
         st.markdown(f'<div class="card-def c-semdef">{sem_definicao}<small>Sem Definição</small></div>',
                     unsafe_allow_html=True)
+    with col6:
+        st.markdown(
+            f'<div class="card-def c-naolocalizado">{nao_localizado}<small>Não Localizado</small></div>',
+            unsafe_allow_html=True
+        )
 
     # === TABELA FINAL DE GESTÃO ===
     st.markdown("<div style='margin-top:15px'></div>", unsafe_allow_html=True)
